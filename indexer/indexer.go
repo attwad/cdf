@@ -9,6 +9,7 @@ import (
 	"github.com/attwad/cdf/data"
 )
 
+// Indexer handles indexing of a course's transcript.
 type Indexer interface {
 	Index(data.Course, []string) error
 }
@@ -18,6 +19,7 @@ type elasticIndexer struct {
 	host   string
 }
 
+// NewElasticIndexer creates a new Indexer connected to elastic search.
 func NewElasticIndexer(host string) Indexer {
 	return &elasticIndexer{
 		client: &http.Client{
@@ -51,8 +53,8 @@ func (i *elasticIndexer) Index(c data.Course, sentences []string) error {
 	seb := string(eb)
 	for _, sentence := range sentences {
 		jt := transcript{Course: c, Transcript: sentence}
-		b, err := json.Marshal(jt)
-		if err != nil {
+		b, err2 := json.Marshal(jt)
+		if err2 != nil {
 			return err
 		}
 		js = append(js, seb, string(b))
