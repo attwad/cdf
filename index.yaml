@@ -1,0 +1,6 @@
+indexes:
+- kind: Entry
+  properties:
+    - name: Converted
+    - name: Scheduled
+    - name: Hash
