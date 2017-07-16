@@ -1,0 +1,4 @@
+language: go
+
+install:
+  - go get cloud.google.com/go/storage
