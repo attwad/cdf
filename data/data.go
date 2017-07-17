@@ -1,5 +1,6 @@
 package data
 
+// Course represents a lesson, colloque, symposium, etc.
 type Course struct {
 	// Title of the course, "What was at Stake in the India-China Opium Trade?".
 	Title string `json:"title"`
@@ -23,4 +24,13 @@ type Course struct {
 	Lang string `json:"lang"`
 	// Where this course was crawled from, "https://www.college-de-france.fr/site/anne-cheng/symposium-2017-06-23-16h15.htm".
 	SourceURL string `json:"source_url"`
+}
+
+// Hints returns a list of sentences or words to help speech recognition.
+func (c *Course) Hints() []string {
+	s := []string{c.Title, c.Lecturer, c.Chaire}
+	if c.TypeTitle != "" {
+		s = append(s, c.TypeTitle)
+	}
+	return s
 }

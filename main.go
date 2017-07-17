@@ -73,7 +73,7 @@ func (a *analyzer) Run() error {
 			return err
 		}
 		// Send it to speech recognition.
-		t, err := a.transcriber.Transcribe(a.uploader.Path(f.Name()))
+		t, err := a.transcriber.Transcribe(a.uploader.Path(f.Name()), course.Hints())
 		if err != nil {
 			return err
 		}

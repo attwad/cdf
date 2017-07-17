@@ -30,7 +30,7 @@ type Transcription struct {
 
 // Transcriber allows transcription of an audio file.
 type Transcriber interface {
-	Transcribe(gcsPath string) ([]Transcription, error)
+	Transcribe(gcsPath string, hints []string) ([]Transcription, error)
 }
 
 type gSpeechTranscriber struct {
@@ -51,8 +51,8 @@ func NewGSpeechTranscriber() (Transcriber, error) {
 	}, nil
 }
 
-func (g *gSpeechTranscriber) Transcribe(gcsURI string) ([]Transcription, error) {
-	opName, err := g.sendGCS(gcsURI)
+func (g *gSpeechTranscriber) Transcribe(gcsURI string, hints []string) ([]Transcription, error) {
+	opName, err := g.sendGCS(gcsURI, hints)
 	if err != nil {
 		return nil, err
 	}
@@ -106,12 +106,15 @@ func (g *gSpeechTranscriber) wait(opName string) (*speechpb.LongRunningRecognize
 	return nil, errors.New("no response")
 }
 
-func (g *gSpeechTranscriber) sendGCS(gcsURI string) (string, error) {
+func (g *gSpeechTranscriber) sendGCS(gcsURI string, hints []string) (string, error) {
 	req := &speechpb.LongRunningRecognizeRequest{
 		Config: &speechpb.RecognitionConfig{
 			Encoding:        speechpb.RecognitionConfig_FLAC,
 			SampleRateHertz: 16000,
 			LanguageCode:    "fr-FR",
+			SpeechContexts: []*speechpb.SpeechContext{
+				{Phrases: hints},
+			},
 		},
 		Audio: &speechpb.RecognitionAudio{
 			AudioSource: &speechpb.RecognitionAudio_Uri{Uri: gcsURI},
