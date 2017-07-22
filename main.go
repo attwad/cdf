@@ -1,15 +1,8 @@
 package main
 
 import (
-	"context"
 	"flag"
-	"io"
-	"io/ioutil"
 	"log"
-	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/attwad/cdf/indexer"
@@ -17,91 +10,8 @@ import (
 	"github.com/attwad/cdf/pick"
 	"github.com/attwad/cdf/transcribe"
 	"github.com/attwad/cdf/upload"
+	"github.com/attwad/cdf/worker"
 )
-
-type analyzer struct {
-	uploader     upload.FileUploader
-	transcriber  transcribe.Transcriber
-	broker       money.Broker
-	picker       pick.Picker
-	indexer      indexer.Indexer
-	pricePerTask int
-	httpClient   *http.Client
-}
-
-func (a *analyzer) Run() error {
-	// Handle the scheduled tasks.
-	courses, err := a.picker.GetScheduled()
-	if err != nil {
-		return err
-	}
-	for key, course := range courses {
-		// Download file from the web.
-		f, tmpCleanup, err := a.downloadToTmpFile(course.AudioLink)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer tmpCleanup()
-		// Convert to FLAC.
-		flacName := strings.TrimSuffix(f.Name(), filepath.Ext(f.Name())) + ".flac"
-		log.Println("Converting", f.Name(), "to flac @", flacName)
-		if err := transcribe.ConvertToFLAC(context.Background(), *soxPath, f.Name(), flacName); err != nil {
-			return err
-		}
-		// Save FLAC to cloud storage.
-		if err := a.uploader.UploadFile(f, filepath.Base(f.Name())); err != nil {
-			return err
-		}
-		// Send it to speech recognition.
-		t, err := a.transcriber.Transcribe(a.uploader.Path(f.Name()), course.Hints())
-		if err != nil {
-			return err
-		}
-		// Save the text output to cloud storage.
-		text := make([]string, 0)
-		for _, b := range t {
-			text = append(text, b.Text)
-		}
-		textName := strings.TrimSuffix(f.Name(), filepath.Ext(f.Name())) + ".txt"
-		log.Println("Saving text to", textName)
-		if err := a.uploader.UploadFile(strings.NewReader(strings.Join(text, " ")), filepath.Base(textName)); err != nil {
-			return err
-		}
-		// Remove FLAC file from cloud storage.
-		if err := a.uploader.Delete(f.Name()); err != nil {
-			return err
-		}
-		// Index sentences.
-		if err := a.indexer.Index(course, text); err != nil {
-			return err
-		}
-		// Mark the file as converted.
-		if err := a.picker.MarkConverted(key); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// downloaddToFile downloads the url target into a temporary file that should be cleaned up by calling the cleanup function returned by this method.
-func (a *analyzer) downloadToTmpFile(url string) (*os.File, func(), error) {
-	tmpFile, err := ioutil.TempFile("", "cdf-dl")
-	if err != nil {
-		return nil, func() {}, err
-	}
-	cleanup := func() { os.Remove(tmpFile.Name()) }
-	resp, err := a.httpClient.Get(url)
-	if err != nil {
-		cleanup()
-		return nil, func() {}, err
-	}
-	defer resp.Body.Close()
-	if _, err := io.Copy(tmpFile, resp.Body); err != nil {
-		cleanup()
-		return nil, func() {}, err
-	}
-	return tmpFile, cleanup, nil
-}
 
 var (
 	projectID    = flag.String("project_id", "", "Project ID")
@@ -130,18 +40,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	a := analyzer{
-		uploader:     u,
-		transcriber:  t,
-		picker:       p,
-		broker:       b,
-		indexer:      indexer.NewElasticIndexer(*elasticHost),
-		pricePerTask: *pricePerTask,
-		// Any download of file shouldn't take more than a few minutes really...
-		httpClient: &http.Client{
-			Timeout: time.Minute * 5,
-		},
-	}
+	a := worker.NewGCPWorker(
+		u,
+		t,
+		b,
+		p,
+		indexer.NewElasticIndexer(*elasticHost),
+		*pricePerTask,
+		*soxPath)
 	log.Println("Analyzer created, entering loop...")
 	for {
 		if err := a.Run(); err != nil {
@@ -157,32 +63,4 @@ func main() {
 			time.Sleep(1 * time.Minute)
 		}
 	}
-}
-
-// MaybeSchedule checks the current balance and schedule new audio tracks to be
-// transcribed if the balance is > a.pricePerTask.
-// Returns whether new tasks were scheduled.
-func (a *analyzer) MaybeSchedule() (bool, error) {
-	// If we have any money, schedule some tasks.
-	balance, err := a.broker.GetBalance()
-	if err != nil {
-		return false, err
-	}
-	log.Println("Balance=", balance, "pricePerTask=", a.pricePerTask)
-	if balance < a.pricePerTask {
-		return false, nil
-	}
-	for balance-a.pricePerTask > 0 {
-		log.Println("Enough money to schedule a new task:", balance)
-		if err := a.picker.ScheduleRandom(); err != nil {
-			return false, err
-		}
-		log.Println("New task scheduled")
-		balance -= a.pricePerTask
-		if err := a.broker.ChangeBalance(-a.pricePerTask); err != nil {
-			return false, err
-		}
-		log.Println("Decreased balance")
-	}
-	return true, nil
 }
