@@ -80,7 +80,6 @@ func (a *analyzer) Run() error {
 			return err
 		}
 	}
-	// TODO: If tasks get scheduled while analysis was running, it will sleep.
 	return nil
 }
 
@@ -149,36 +148,41 @@ func main() {
 			log.Fatalf("running: %v", err)
 		}
 		log.Println("Sleeping...")
-		time.Sleep(1 * time.Minute)
-		if err := a.MaybeSchedule(); err != nil {
-			log.Fatalf("checking balance: %v", err)
+		hasNew, err := a.MaybeSchedule()
+		if err != nil {
+			log.Fatalf("Scheduling new tasks: %v", err)
+		}
+		// Only sleep if we have nothing scheduled.
+		if !hasNew {
+			time.Sleep(1 * time.Minute)
 		}
 	}
 }
 
 // MaybeSchedule checks the current balance and schedule new audio tracks to be
 // transcribed if the balance is > a.pricePerTask.
-func (a *analyzer) MaybeSchedule() error {
+// Returns whether new tasks were scheduled.
+func (a *analyzer) MaybeSchedule() (bool, error) {
 	// If we have any money, schedule some tasks.
 	balance, err := a.broker.GetBalance()
 	if err != nil {
-		return err
+		return false, err
 	}
 	log.Println("Balance=", balance, "pricePerTask=", a.pricePerTask)
 	if balance < a.pricePerTask {
-		return nil
+		return false, nil
 	}
 	for balance-a.pricePerTask > 0 {
 		log.Println("Enough money to schedule a new task:", balance)
 		if err := a.picker.ScheduleRandom(); err != nil {
-			return err
+			return false, err
 		}
 		log.Println("New task scheduled")
 		balance -= a.pricePerTask
 		if err := a.broker.ChangeBalance(-a.pricePerTask); err != nil {
-			return err
+			return false, err
 		}
 		log.Println("Decreased balance")
 	}
-	return nil
+	return true, nil
 }
