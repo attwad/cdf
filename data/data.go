@@ -1,5 +1,7 @@
 package data
 
+import "time"
+
 // Course represents a lesson, colloque, symposium, etc.
 type Course struct {
 	// Title of the course, "What was at Stake in the India-China Opium Trade?".
@@ -8,10 +10,10 @@ type Course struct {
 	Lecturer string `json:"lecturer"`
 	// Function of the lecturer, "EHESS, Paris".
 	Function string `json:"function,omitempty"`
-	// Date of the course. "23 juin 2017".
-	Date string `json:"date"`
+	// Date of the course, UTC.
+	Date time.Time
 	// Type of the course. "Colloque", "Lesson inaugurale", etc.
-	Type string `json:"type"`
+	LessonType string `json:"lesson_type"`
 	// Title of the colloque / yearly lesson. "Inde-Chine : Universalités croisées".
 	TypeTitle string `json:"type_title,omitempty"`
 	// Video link if present.
@@ -21,9 +23,9 @@ type Course struct {
 	// Title of the chaire. "Histoire intellectuelle de la Chine".
 	Chaire string `json:"chaire"`
 	// Language of the audio. ("fr", "en", etc.)
-	Lang string `json:"lang"`
+	Language string `json:"lang"`
 	// Where this course was crawled from, "https://www.college-de-france.fr/site/anne-cheng/symposium-2017-06-23-16h15.htm".
-	SourceURL string `json:"source_url"`
+	Source string `json:"source_url"`
 }
 
 // Hints returns a list of sentences or words to help speech recognition.

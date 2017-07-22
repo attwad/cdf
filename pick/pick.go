@@ -25,9 +25,9 @@ type entry struct {
 
 // Picker allows access to items and scheduling.
 type Picker interface {
-	GetScheduled() ([]data.Course, error)
+	GetScheduled() (map[string]data.Course, error)
 	ScheduleRandom() error
-	MarkConverted(data.Course) error
+	MarkConverted(key string) error
 }
 
 type datastorePicker struct {
@@ -54,19 +54,22 @@ func hashURL(url string) []byte {
 	return h.Sum(nil)
 }
 
-func (p *datastorePicker) MarkConverted(c data.Course) error {
+func (p *datastorePicker) MarkConverted(key string) error {
 	tx, err := p.client.NewTransaction(p.ctx)
 	if err != nil {
 		return fmt.Errorf("NewTransaction: %v", err)
 	}
 	var e entry
-	key := datastore.NameKey("Entry", c.AudioLink, nil)
-	if err := tx.Get(key, &e); err != nil {
+	k, err := datastore.DecodeKey(key)
+	if err != nil {
+		return fmt.Errorf("decode key: %s", err)
+	}
+	if err := tx.Get(k, &e); err != nil {
 		return fmt.Errorf("tx.Get: %v", err)
 	}
 	fmt.Println("Read entry:", e, "with key:", key)
 	e.Converted = true
-	if _, err := tx.Put(key, &e); err != nil {
+	if _, err := tx.Put(k, &e); err != nil {
 		return fmt.Errorf("tx.Put: %v", err)
 	}
 	if _, err := tx.Commit(); err != nil {
@@ -122,21 +125,21 @@ func (p *datastorePicker) ScheduleRandom() error {
 	return nil
 }
 
-func (p *datastorePicker) GetScheduled() ([]data.Course, error) {
+func (p *datastorePicker) GetScheduled() (map[string]data.Course, error) {
 	// Pick a random (has-ordered) entry that is not scheduled and not converted yet.
 	query := datastore.NewQuery("Entry").
 		Filter("Scheduled =", true)
 	var e entry
 	it := p.client.Run(p.ctx, query)
-	courses := make([]data.Course, 0)
+	courses := make(map[string]data.Course, 0)
 	for {
-		_, err := it.Next(&e)
+		k, err := it.Next(&e)
 		for err == iterator.Done {
 			return courses, nil
 		}
 		if err != nil {
 			return nil, fmt.Errorf("failed fetching results: %v", err)
 		}
-		courses = append(courses, e.Course)
+		courses[k.Encode()] = e.Course
 	}
 }

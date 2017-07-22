@@ -30,32 +30,12 @@ type analyzer struct {
 }
 
 func (a *analyzer) Run() error {
-	// If we have any money, schedule some tasks.
-	balance, err := a.broker.GetBalance()
-	if err != nil {
-		return err
-	}
-	log.Println("Balance=", balance, "pricePerTask=", a.pricePerTask)
-	if balance < a.pricePerTask {
-		return nil
-	}
-	for balance-a.pricePerTask > 0 {
-		log.Println("Enough money to schedule a new task:", balance)
-		if err := a.picker.ScheduleRandom(); err != nil {
-			return err
-		}
-		balance -= a.pricePerTask
-		if err := a.broker.ChangeBalance(-a.pricePerTask); err != nil {
-			return err
-		}
-		log.Println("New task scheduled")
-	}
 	// Handle the scheduled tasks.
 	courses, err := a.picker.GetScheduled()
 	if err != nil {
 		return err
 	}
-	for _, course := range courses {
+	for key, course := range courses {
 		// Download file from the web.
 		f, tmpCleanup, err := a.downloadToTmpFile(course.AudioLink)
 		if err != nil {
@@ -96,7 +76,7 @@ func (a *analyzer) Run() error {
 			return err
 		}
 		// Mark the file as converted.
-		if err := a.picker.MarkConverted(course); err != nil {
+		if err := a.picker.MarkConverted(key); err != nil {
 			return err
 		}
 	}
@@ -139,8 +119,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// p.ScheduleRandom()
-	//return
 	u, err := upload.NewGCSFileUploader(*bucket)
 	if err != nil {
 		log.Fatal(err)
@@ -172,5 +150,35 @@ func main() {
 		}
 		log.Println("Sleeping...")
 		time.Sleep(1 * time.Minute)
+		if err := a.MaybeSchedule(); err != nil {
+			log.Fatalf("checking balance: %v", err)
+		}
 	}
+}
+
+// MaybeSchedule checks the current balance and schedule new audio tracks to be
+// transcribed if the balance is > a.pricePerTask.
+func (a *analyzer) MaybeSchedule() error {
+	// If we have any money, schedule some tasks.
+	balance, err := a.broker.GetBalance()
+	if err != nil {
+		return err
+	}
+	log.Println("Balance=", balance, "pricePerTask=", a.pricePerTask)
+	if balance < a.pricePerTask {
+		return nil
+	}
+	for balance-a.pricePerTask > 0 {
+		log.Println("Enough money to schedule a new task:", balance)
+		if err := a.picker.ScheduleRandom(); err != nil {
+			return err
+		}
+		log.Println("New task scheduled")
+		balance -= a.pricePerTask
+		if err := a.broker.ChangeBalance(-a.pricePerTask); err != nil {
+			return err
+		}
+		log.Println("Decreased balance")
+	}
+	return nil
 }
