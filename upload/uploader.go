@@ -8,9 +8,13 @@ import (
 	"cloud.google.com/go/storage"
 )
 
+// FileUploader uploads files to a storage service.
 type FileUploader interface {
+	// UploadFile uploads the file read by the given Reader and give it a name as specified.
 	UploadFile(r io.Reader, name string) error
+	// Path returns the full path of the file in the storage backend used.
 	Path(base string) string
+	// Delete deletes the given file.
 	Delete(name string) error
 }
 
@@ -20,6 +24,7 @@ type gcsFileUploader struct {
 	bucket string
 }
 
+// NewGCSFileUploader creates a new FileUploader that uses Google Cloud Storage.
 func NewGCSFileUploader(bucket string) (FileUploader, error) {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
