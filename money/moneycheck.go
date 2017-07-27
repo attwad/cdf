@@ -72,7 +72,7 @@ func (b *datastoreBroker) init() error {
 	var act account
 	if err := b.client.Get(b.ctx, accountKey, &act); err != nil {
 		if err == datastore.ErrNoSuchEntity {
-			fmt.Errorf("could not get initial account entity, creating one: %s", err)
+			log.Println("could not get initial account entity, creating one")
 			// Create a default zero value.
 			key, err := b.client.Put(b.ctx, accountKey, &act)
 			if err != nil {
