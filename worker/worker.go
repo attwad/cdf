@@ -18,6 +18,7 @@ import (
 	"github.com/attwad/cdf/upload"
 )
 
+// Worker does the actual job of checking the balance, scheduling tasks, downloading audio files, transcribing them, etc.
 type Worker struct {
 	uploader     upload.FileUploader
 	transcriber  transcribe.Transcriber
@@ -32,13 +33,15 @@ type Worker struct {
 // NewGCPWorker creates a new worker that does its work using Google Cloud Platform.
 func NewGCPWorker(u upload.FileUploader, t transcribe.Transcriber, m money.Broker, p pick.Picker, i indexer.Indexer, pricePerTask int, soxPath string) *Worker {
 	return &Worker{
-		u, t, m, p, i, pricePerTask, soxPath, // Any download of file shouldn't take more than a few minutes really...
+		u, t, m, p, i, pricePerTask, soxPath,
+		// Any download of file shouldn't take more than a few minutes really...
 		&http.Client{
 			Timeout: time.Minute * 5,
 		},
 	}
 }
 
+// Run checks for scheduled tasks and handle all of them if any.
 func (w *Worker) Run() error {
 	// Handle the scheduled tasks.
 	courses, err := w.picker.GetScheduled()
@@ -63,7 +66,7 @@ func (w *Worker) Run() error {
 			return err
 		}
 		// Send it to speech recognition.
-		t, err := w.transcriber.Transcribe(w.uploader.Path(f.Name()), course.Hints())
+		t, err := w.transcriber.Transcribe(course.Language, w.uploader.Path(f.Name()), course.Hints())
 		if err != nil {
 			return err
 		}

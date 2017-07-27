@@ -2,9 +2,7 @@ package pick
 
 import (
 	"context"
-	"crypto/sha1"
 	"fmt"
-	"io"
 	"time"
 
 	"github.com/attwad/cdf/data"
@@ -48,12 +46,6 @@ func NewDatastorePicker(projectID string) (Picker, error) {
 	}, nil
 }
 
-func hashURL(url string) []byte {
-	h := sha1.New()
-	io.WriteString(h, url)
-	return h.Sum(nil)
-}
-
 func (p *datastorePicker) MarkConverted(key string) error {
 	tx, err := p.client.NewTransaction(p.ctx)
 	if err != nil {
@@ -79,26 +71,7 @@ func (p *datastorePicker) MarkConverted(key string) error {
 }
 
 func (p *datastorePicker) ScheduleRandom() error {
-	/*c1 := testdata.CreateCourse()
-	c2 := testdata.CreateCourse()
-	c2.AudioLink = "url2"
-	c3 := testdata.CreateCourse()
-	c3.AudioLink = "url3"
-	entries := []*entry{
-		{Course: c1, Hash: hashURL(c1.AudioLink)},
-		{Course: c2, Hash: hashURL(c2.AudioLink), Converted: true},
-		{Course: c3, Hash: hashURL(c3.AudioLink)},
-	}
-	keys := []*datastore.Key{
-		datastore.NameKey("Entry", c1.AudioLink, nil),
-		datastore.NameKey("Entry", c2.AudioLink, nil),
-		datastore.NameKey("Entry", c3.AudioLink, nil),
-	}
-	_, err := p.client.PutMulti(p.ctx, keys, entries)
-	if err != nil {
-		log.Fatal(err)
-	}*/
-	// Pick a random (has-ordered) entry that is not scheduled and not converted yet.
+	// Pick a random (hash-ordered) entry that is not scheduled and not converted yet.
 	query := datastore.NewQuery("Entry").
 		Filter("Converted =", false).
 		Filter("Scheduled =", false).

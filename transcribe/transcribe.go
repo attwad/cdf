@@ -9,6 +9,7 @@ import (
 	"github.com/golang/protobuf/proto"
 
 	"golang.org/x/net/context"
+	"golang.org/x/text/language"
 
 	speech "cloud.google.com/go/speech/apiv1"
 	speechpb "google.golang.org/genproto/googleapis/cloud/speech/v1"
@@ -19,6 +20,7 @@ import (
 func ConvertToFLAC(ctx context.Context, soxPath, input, output string) error {
 	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
+	// TODO: Split audio file in 1h chunks as GCP only supports max 1h.
 	return exec.CommandContext(ctx, soxPath, input, output, "channels", "1", "rate", "16k").Run()
 }
 
@@ -30,7 +32,7 @@ type Transcription struct {
 
 // Transcriber allows transcription of an audio file.
 type Transcriber interface {
-	Transcribe(gcsPath string, hints []string) ([]Transcription, error)
+	Transcribe(lang, path string, hints []string) ([]Transcription, error)
 }
 
 type gSpeechTranscriber struct {
@@ -51,8 +53,8 @@ func NewGSpeechTranscriber() (Transcriber, error) {
 	}, nil
 }
 
-func (g *gSpeechTranscriber) Transcribe(gcsURI string, hints []string) ([]Transcription, error) {
-	opName, err := g.sendGCS(gcsURI, hints)
+func (g *gSpeechTranscriber) Transcribe(lang, gcsURI string, hints []string) ([]Transcription, error) {
+	opName, err := g.sendGCS(lang, gcsURI, hints)
 	if err != nil {
 		return nil, err
 	}
@@ -106,12 +108,12 @@ func (g *gSpeechTranscriber) wait(opName string) (*speechpb.LongRunningRecognize
 	return nil, errors.New("no response")
 }
 
-func (g *gSpeechTranscriber) sendGCS(gcsURI string, hints []string) (string, error) {
+func (g *gSpeechTranscriber) sendGCS(lang, gcsURI string, hints []string) (string, error) {
 	req := &speechpb.LongRunningRecognizeRequest{
 		Config: &speechpb.RecognitionConfig{
 			Encoding:        speechpb.RecognitionConfig_FLAC,
 			SampleRateHertz: 16000,
-			LanguageCode:    "fr-FR",
+			LanguageCode:    language.Make(lang).String(), // Must be something like "fr-FR".
 			SpeechContexts: []*speechpb.SpeechContext{
 				{Phrases: hints},
 			},
