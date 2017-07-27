@@ -40,6 +40,7 @@ type indexEntry struct {
 
 type transcript struct {
 	data.Course
+	Serial     int
 	Transcript string `json:"transcript"`
 }
 
@@ -51,16 +52,16 @@ func (i *elasticIndexer) Index(c data.Course, sentences []string) error {
 		return err
 	}
 	seb := string(eb)
-	for _, sentence := range sentences {
-		jt := transcript{Course: c, Transcript: sentence}
+	for i, sentence := range sentences {
+		jt := transcript{Course: c, Transcript: sentence, Serial: i}
 		b, err2 := json.Marshal(jt)
 		if err2 != nil {
 			return err
 		}
 		js = append(js, seb, string(b))
 	}
-	// log.Println(strings.Join(js, "\n"))
 	r := strings.NewReader(strings.Join(js, "\n"))
 	_, err = i.client.Post(i.host+"/_bulk", "application/json", r)
+	// TODO: Parse response.
 	return err
 }
