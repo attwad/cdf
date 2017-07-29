@@ -2,7 +2,10 @@ package worker
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/attwad/cdf/pick"
 )
@@ -77,4 +80,22 @@ func TestMaybeSchedule(t *testing.T) {
 			t.Errorf("[%s]wantError, got=%t, want=%t", test.msg, got, want)
 		}
 	}
+}
+
+func TestDownloadToTmpFile(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+	}))
+	defer ts.Close()
+
+	w := Worker{
+		httpClient: &http.Client{
+			Timeout: time.Second * 5,
+		},
+	}
+	_, cleanup, err := w.downloadToTmpFile(ts.URL)
+	if err != nil {
+		t.Fatalf("downloadToTmpFile: %v", err)
+	}
+	defer cleanup()
 }
