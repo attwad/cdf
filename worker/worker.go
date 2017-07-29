@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"context"
 	"io"
 	"io/ioutil"
 	"log"
@@ -56,7 +55,7 @@ func (w *Worker) Run() error {
 		}
 		defer tmpCleanup()
 		// Convert to FLAC.
-		paths, err := transcribe.ConvertToFLAC(context.Background(), w.soxPath, f.Name())
+		paths, err := w.transcriber.ConvertToFLAC(w.soxPath, f.Name())
 		if err != nil {
 			return err
 		}

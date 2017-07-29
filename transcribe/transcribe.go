@@ -19,23 +19,6 @@ import (
 	longrunningpb "google.golang.org/genproto/googleapis/longrunning"
 )
 
-// ConvertToFLAC converts the input audio file into a FLAC audio file as the output filename using the program sox.
-// Returns the output paths.
-func ConvertToFLAC(ctx context.Context, soxPath, input string) ([]string, error) {
-	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
-	defer cancel()
-	baseName := strings.TrimSuffix(input, filepath.Ext(input))
-	flacName := baseName + ".flac"
-	log.Println("Converting", input, "to flac @", flacName)
-	// Convert input to mono FLAC, split output in chunks of 59min as GCP Speech
-	// API supports max 1h chunks.
-	err := exec.CommandContext(ctx, soxPath, input, flacName, "channels", "1", "rate", "16k", "trim", "0", "3540", ":", "newfile", ":", "restart").Run()
-	if err != nil {
-		return nil, err
-	}
-	return filepath.Glob(baseName + ".*flac")
-}
-
 // Transcription contains what was said with a given confidence score for the overall transcription.
 type Transcription struct {
 	Text       string
@@ -45,6 +28,7 @@ type Transcription struct {
 // Transcriber allows transcription of an audio file.
 type Transcriber interface {
 	Transcribe(lang, path string, hints []string) ([]Transcription, error)
+	ConvertToFLAC(soxPath, input string) ([]string, error)
 }
 
 type gSpeechTranscriber struct {
@@ -140,4 +124,21 @@ func (g *gSpeechTranscriber) sendGCS(lang, gcsURI string, hints []string) (strin
 		return "", err
 	}
 	return op.Name(), nil
+}
+
+// ConvertToFLAC converts the input audio file into a FLAC audio file as the output filename using the program sox.
+// Returns the output paths.
+func (g *gSpeechTranscriber) ConvertToFLAC(soxPath, input string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(g.ctx, 120*time.Second)
+	defer cancel()
+	baseName := strings.TrimSuffix(input, filepath.Ext(input))
+	flacName := baseName + ".flac"
+	log.Println("Converting", input, "to flac @", flacName)
+	// Convert input to mono FLAC, split output in chunks of 59min as GCP Speech
+	// API supports max 1h chunks.
+	err := exec.CommandContext(ctx, soxPath, input, flacName, "channels", "1", "rate", "16k", "trim", "0", "3540", ":", "newfile", ":", "restart").Run()
+	if err != nil {
+		return nil, err
+	}
+	return filepath.Glob(baseName + ".*flac")
 }
