@@ -3,7 +3,10 @@ package transcribe
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -17,11 +20,20 @@ import (
 )
 
 // ConvertToFLAC converts the input audio file into a FLAC audio file as the output filename using the program sox.
-func ConvertToFLAC(ctx context.Context, soxPath, input, output string) error {
+// Returns the output paths.
+func ConvertToFLAC(ctx context.Context, soxPath, input string) ([]string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
-	// TODO: Split audio file in 1h chunks as GCP only supports max 1h.
-	return exec.CommandContext(ctx, soxPath, input, output, "channels", "1", "rate", "16k").Run()
+	baseName := strings.TrimSuffix(input, filepath.Ext(input))
+	flacName := baseName + ".flac"
+	log.Println("Converting", input, "to flac @", flacName)
+	// Convert input to mono FLAC, split output in chunks of 59min as GCP Speech
+	// API supports max 1h chunks.
+	err := exec.CommandContext(ctx, soxPath, input, flacName, "channels", "1", "rate", "16k", "trim", "0", "3540", ":", "newfile", ":", "restart").Run()
+	if err != nil {
+		return nil, err
+	}
+	return filepath.Glob(baseName + ".*flac")
 }
 
 // Transcription contains what was said with a given confidence score for the overall transcription.

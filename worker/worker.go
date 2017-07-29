@@ -56,37 +56,44 @@ func (w *Worker) Run() error {
 		}
 		defer tmpCleanup()
 		// Convert to FLAC.
-		flacName := strings.TrimSuffix(f.Name(), filepath.Ext(f.Name())) + ".flac"
-		log.Println("Converting", f.Name(), "to flac @", flacName)
-		if err := transcribe.ConvertToFLAC(context.Background(), w.soxPath, f.Name(), flacName); err != nil {
-			return err
-		}
-		// Save FLAC to cloud storage.
-		if err := w.uploader.UploadFile(f, filepath.Base(f.Name())); err != nil {
-			return err
-		}
-		// Send it to speech recognition.
-		t, err := w.transcriber.Transcribe(course.Language, w.uploader.Path(f.Name()), course.Hints())
+		paths, err := transcribe.ConvertToFLAC(context.Background(), w.soxPath, f.Name())
 		if err != nil {
 			return err
 		}
-		// Save the text output to cloud storage.
-		text := make([]string, 0)
-		for _, b := range t {
-			text = append(text, b.Text)
-		}
-		textName := strings.TrimSuffix(f.Name(), filepath.Ext(f.Name())) + ".txt"
-		log.Println("Saving text to", textName)
-		if err := w.uploader.UploadFile(strings.NewReader(strings.Join(text, " ")), filepath.Base(textName)); err != nil {
-			return err
-		}
-		// Remove FLAC file from cloud storage.
-		if err := w.uploader.Delete(f.Name()); err != nil {
-			return err
-		}
-		// Index sentences.
-		if err := w.indexer.Index(course, text); err != nil {
-			return err
+		for _, flac := range paths {
+			flacReader, err := os.Open(flac)
+			if err != nil {
+				return err
+			}
+			defer flacReader.Close()
+			// Save FLAC to cloud storage.
+			if err := w.uploader.UploadFile(flacReader, filepath.Base(flac)); err != nil {
+				return err
+			}
+			// Send it to speech recognition.
+			t, err := w.transcriber.Transcribe(course.Language, w.uploader.Path(flac), course.Hints())
+			if err != nil {
+				return err
+			}
+			// Save the text output to cloud storage.
+			text := make([]string, 0)
+			for _, b := range t {
+				text = append(text, b.Text)
+			}
+			textName := strings.TrimSuffix(f.Name(), filepath.Ext(f.Name())) + ".txt"
+			log.Println("Saving text to", textName)
+			if err := w.uploader.UploadFile(strings.NewReader(strings.Join(text, " ")), filepath.Base(textName)); err != nil {
+				return err
+			}
+			// Remove FLAC file from cloud storage.
+			// TODO: defer and panic on error?
+			if err := w.uploader.Delete(f.Name()); err != nil {
+				return err
+			}
+			// Index sentences.
+			if err := w.indexer.Index(course, text); err != nil {
+				return err
+			}
 		}
 		// Mark the file as converted.
 		if err := w.picker.MarkConverted(key); err != nil {
@@ -96,7 +103,7 @@ func (w *Worker) Run() error {
 	return nil
 }
 
-// downloaddToFile downloads the url target into a temporary file that should be cleaned up by calling the cleanup function returned by this method.
+// downloadToTmpFile downloads the url target into a temporary file that should be cleaned up by calling the cleanup function returned by this method.
 func (w *Worker) downloadToTmpFile(url string) (*os.File, func(), error) {
 	tmpFile, err := ioutil.TempFile("", "cdf-dl")
 	if err != nil {
