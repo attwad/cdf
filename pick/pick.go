@@ -59,7 +59,6 @@ func (p *datastorePicker) MarkConverted(key string) error {
 	if err := tx.Get(k, &e); err != nil {
 		return fmt.Errorf("tx.Get: %v", err)
 	}
-	fmt.Println("Read entry:", e, "with key:", key)
 	e.Converted = true
 	if _, err := tx.Put(k, &e); err != nil {
 		return fmt.Errorf("tx.Put: %v", err)

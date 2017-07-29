@@ -35,7 +35,7 @@ func NewGCPWorker(u upload.FileUploader, t transcribe.Transcriber, m money.Broke
 		u, t, m, p, i, pricePerTask, soxPath,
 		// Any download of file shouldn't take more than a few minutes really...
 		&http.Client{
-			Timeout: time.Minute * 5,
+			Timeout: time.Minute * 30,
 		},
 	}
 }
@@ -49,16 +49,19 @@ func (w *Worker) Run() error {
 	}
 	for key, course := range courses {
 		// Download file from the web.
+		log.Println("Downloading", course.AudioLink, "to tmp file")
 		f, tmpCleanup, err := w.downloadToTmpFile(course.AudioLink)
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer tmpCleanup()
 		// Convert to FLAC.
+		log.Println("Converting to flac")
 		paths, err := w.transcriber.ConvertToFLAC(w.soxPath, f.Name())
 		if err != nil {
 			return err
 		}
+		log.Println("FLAC files:", paths)
 		for _, flac := range paths {
 			flacReader, err := os.Open(flac)
 			if err != nil {
@@ -66,11 +69,13 @@ func (w *Worker) Run() error {
 			}
 			defer flacReader.Close()
 			// Save FLAC to cloud storage.
+			log.Println("Saving flac to could storage")
 			if err := w.uploader.UploadFile(flacReader, filepath.Base(flac)); err != nil {
 				return err
 			}
 			// Send it to speech recognition.
-			t, err := w.transcriber.Transcribe(course.Language, w.uploader.Path(flac), course.Hints())
+			log.Println("Transcribing audio")
+			t, err := w.transcriber.Transcribe(course.Language, w.uploader.Path(filepath.Base(flac)), course.Hints())
 			if err != nil {
 				return err
 			}
@@ -79,22 +84,26 @@ func (w *Worker) Run() error {
 			for _, b := range t {
 				text = append(text, b.Text)
 			}
-			textName := strings.TrimSuffix(f.Name(), filepath.Ext(f.Name())) + ".txt"
+			textName := f.Name() + ".txt"
 			log.Println("Saving text to", textName)
+			log.Println(text)
 			if err := w.uploader.UploadFile(strings.NewReader(strings.Join(text, " ")), filepath.Base(textName)); err != nil {
 				return err
 			}
 			// Remove FLAC file from cloud storage.
 			// TODO: defer and panic on error?
-			if err := w.uploader.Delete(f.Name()); err != nil {
+			log.Println("Deleting flac from cloud storage")
+			if err := w.uploader.Delete(filepath.Base(flac)); err != nil {
 				return err
 			}
 			// Index sentences.
+			log.Println("Indexing text")
 			if err := w.indexer.Index(course, text); err != nil {
 				return err
 			}
 		}
 		// Mark the file as converted.
+		log.Println("Marking", key, "as converted")
 		if err := w.picker.MarkConverted(key); err != nil {
 			return err
 		}

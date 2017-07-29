@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 
 	"cloud.google.com/go/storage"
 )
@@ -43,6 +44,7 @@ func (u *gcsFileUploader) Path(base string) string {
 }
 
 func (u *gcsFileUploader) UploadFile(r io.Reader, name string) error {
+	log.Println("Uploading", name, "to bucket", u.bucket)
 	bkt := u.client.Bucket(u.bucket)
 	w := bkt.Object(name).NewWriter(u.ctx)
 	if _, err := io.Copy(w, r); err != nil {
@@ -55,6 +57,7 @@ func (u *gcsFileUploader) UploadFile(r io.Reader, name string) error {
 }
 
 func (u *gcsFileUploader) Delete(name string) error {
+	log.Println("Deleting", name, "from bucket", u.bucket)
 	o := u.client.Bucket(u.bucket).Object(name)
 	return o.Delete(u.ctx)
 }

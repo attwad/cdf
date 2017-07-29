@@ -24,6 +24,7 @@ var (
 func main() {
 	flag.Parse()
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+
 	p, err := pick.NewDatastorePicker(*projectID)
 	if err != nil {
 		log.Fatal(err)

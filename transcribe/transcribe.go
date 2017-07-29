@@ -6,7 +6,6 @@ import (
 	"log"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -118,6 +117,7 @@ func (g *gSpeechTranscriber) sendGCS(lang, gcsURI string, hints []string) (strin
 			AudioSource: &speechpb.RecognitionAudio_Uri{Uri: gcsURI},
 		},
 	}
+	log.Println("Sending gspeech request", req)
 
 	op, err := g.client.LongRunningRecognize(g.ctx, req)
 	if err != nil {
@@ -131,14 +131,13 @@ func (g *gSpeechTranscriber) sendGCS(lang, gcsURI string, hints []string) (strin
 func (g *gSpeechTranscriber) ConvertToFLAC(soxPath, input string) ([]string, error) {
 	ctx, cancel := context.WithTimeout(g.ctx, 120*time.Second)
 	defer cancel()
-	baseName := strings.TrimSuffix(input, filepath.Ext(input))
-	flacName := baseName + ".flac"
+	flacName := input + ".flac"
 	log.Println("Converting", input, "to flac @", flacName)
 	// Convert input to mono FLAC, split output in chunks of 59min as GCP Speech
 	// API supports max 1h chunks.
-	err := exec.CommandContext(ctx, soxPath, input, flacName, "channels", "1", "rate", "16k", "trim", "0", "3540", ":", "newfile", ":", "restart").Run()
+	err := exec.CommandContext(ctx, soxPath, "-t", "mp3", input, flacName, "channels", "1", "rate", "16k", "trim", "0", "3540", ":", "newfile", ":", "restart").Run()
 	if err != nil {
 		return nil, err
 	}
-	return filepath.Glob(baseName + ".*flac")
+	return filepath.Glob(input + "*.flac")
 }
