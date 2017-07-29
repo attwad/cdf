@@ -16,12 +16,12 @@ func (p *fakePicker) ScheduleRandom() error {
 }
 
 type fakeBroker struct {
-	balance      int
-	balanceError error
+	balance         int
+	getBalanceError error
 }
 
 func (b *fakeBroker) GetBalance() (int, error) {
-	return b.balance, b.balanceError
+	return b.balance, b.getBalanceError
 }
 
 func (b *fakeBroker) ChangeBalance(delta int) error {
@@ -30,34 +30,51 @@ func (b *fakeBroker) ChangeBalance(delta int) error {
 }
 
 func TestMaybeSchedule(t *testing.T) {
-	fb := &fakeBroker{balance: 50}
-	w := Worker{
-		broker:       fb,
-		picker:       &fakePicker{},
-		pricePerTask: 5,
+	var tests = []struct {
+		msg           string
+		w             Worker
+		taskScheduled bool
+		wantError     bool
+	}{
+		{
+			msg: "balance ok",
+			w: Worker{
+				broker:       &fakeBroker{balance: 50},
+				picker:       &fakePicker{},
+				pricePerTask: 5,
+			},
+			taskScheduled: true,
+			wantError:     false,
+		}, {
+			msg: "not enough balance",
+			w: Worker{
+				broker:       &fakeBroker{balance: 3},
+				picker:       &fakePicker{},
+				pricePerTask: 5,
+			},
+			taskScheduled: false,
+			wantError:     false,
+		}, {
+			msg: "error checking balance",
+			w: Worker{
+				broker: &fakeBroker{
+					balance:         50,
+					getBalanceError: fmt.Errorf("not connected"),
+				},
+				picker:       &fakePicker{},
+				pricePerTask: 5,
+			},
+			taskScheduled: false,
+			wantError:     true,
+		},
 	}
-	taskScheduled, err := w.MaybeSchedule()
-	if !taskScheduled {
-		t.Error("tasks were not scheduled")
+	for _, test := range tests {
+		taskScheduled, err := test.w.MaybeSchedule()
+		if got, want := taskScheduled, test.taskScheduled; got != want {
+			t.Errorf("[%s] task scheduled, got=%t, want=%t", test.msg, got, want)
+		}
+		if got, want := err != nil, test.wantError; got != want {
+			t.Errorf("[%s]wantError, got=%t, want=%t", test.msg, got, want)
+		}
 	}
-	if err != nil {
-		t.Errorf("MaybeSchedule: %v", err)
-	}
-}
-
-func TestMaybeScheduleGetBalanceFails(t *testing.T) {
-	fb := &fakeBroker{balance: 50, balanceError: fmt.Errorf("not connected")}
-	w := Worker{
-		broker:       fb,
-		picker:       &fakePicker{},
-		pricePerTask: 5,
-	}
-	taskScheduled, err := w.MaybeSchedule()
-	if err == nil {
-		t.Error("Want error, got nil")
-	}
-	if taskScheduled {
-		t.Error("tasks were scheduled but should not have")
-	}
-
 }
