@@ -103,7 +103,7 @@ func (w *Worker) Run() error {
 			}
 		}
 		// Mark the file as converted.
-		log.Println("Marking", key, "as converted")
+		log.Println("Marking", course.AudioLink, "as converted")
 		if err := w.picker.MarkConverted(key); err != nil {
 			return err
 		}

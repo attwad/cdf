@@ -108,7 +108,7 @@ func (g *gSpeechTranscriber) sendGCS(lang, gcsURI string, hints []string) (strin
 		Config: &speechpb.RecognitionConfig{
 			Encoding:        speechpb.RecognitionConfig_FLAC,
 			SampleRateHertz: 16000,
-			LanguageCode:    language.Make(lang).String(), // Must be something like "fr-FR".
+			LanguageCode:    language.Make(lang).String(), // Must be something like "fr" or "en-US".
 			SpeechContexts: []*speechpb.SpeechContext{
 				{Phrases: hints},
 			},

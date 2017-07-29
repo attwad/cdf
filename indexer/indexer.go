@@ -2,6 +2,8 @@ package indexer
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -60,8 +62,17 @@ func (i *elasticIndexer) Index(c data.Course, sentences []string) error {
 		}
 		js = append(js, seb, string(b))
 	}
-	r := strings.NewReader(strings.Join(js, "\n"))
-	_, err = i.client.Post(i.host+"/_bulk", "application/json", r)
+	r := strings.NewReader(strings.Join(js, "\n") + "\n")
+	resp, err := i.client.Post(i.host+"/_bulk", "application/json", r)
+	if err != nil {
+		return err
+	}
 	// TODO: Parse response.
-	return err
+	defer resp.Body.Close()
+	rb, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	log.Println("Index response:", string(rb))
+	return nil
 }
