@@ -19,20 +19,19 @@ import (
 
 // Worker does the actual job of checking the balance, scheduling tasks, downloading audio files, transcribing them, etc.
 type Worker struct {
-	uploader     upload.FileUploader
-	transcriber  transcribe.Transcriber
-	broker       money.Broker
-	picker       pick.Picker
-	indexer      indexer.Indexer
-	pricePerTask int
-	soxPath      string
-	httpClient   *http.Client
+	uploader    upload.FileUploader
+	transcriber transcribe.Transcriber
+	broker      money.Broker
+	picker      pick.Picker
+	indexer     indexer.Indexer
+	soxPath     string
+	httpClient  *http.Client
 }
 
 // NewGCPWorker creates a new worker that does its work using Google Cloud Platform.
-func NewGCPWorker(u upload.FileUploader, t transcribe.Transcriber, m money.Broker, p pick.Picker, i indexer.Indexer, pricePerTask int, soxPath string) *Worker {
+func NewGCPWorker(u upload.FileUploader, t transcribe.Transcriber, m money.Broker, p pick.Picker, i indexer.Indexer, soxPath string) *Worker {
 	return &Worker{
-		u, t, m, p, i, pricePerTask, soxPath,
+		u, t, m, p, i, soxPath,
 		// Any download of file shouldn't take more than a few minutes really...
 		&http.Client{
 			Timeout: time.Minute * 30,
@@ -132,29 +131,31 @@ func (w *Worker) downloadToTmpFile(url string) (*os.File, func(), error) {
 }
 
 // MaybeSchedule checks the current balance and schedule new audio tracks to be
-// transcribed if the balance is > w.pricePerTask.
+// transcribed.
+// Simple greedy algorithm, should use dynamic programming if I want to
+// optimize for the number of courses converted vs pure length.
 // Returns whether new tasks were scheduled.
 func (w *Worker) MaybeSchedule() (bool, error) {
-	// If we have any money, schedule some tasks.
+	// Get our current balance.
 	balance, err := w.broker.GetBalance()
 	if err != nil {
 		return false, err
 	}
-	log.Println("Balance=", balance, "pricePerTask=", w.pricePerTask)
-	if balance < w.pricePerTask {
+	log.Println("Balance=", balance)
+	if balance <= 0 {
 		return false, nil
 	}
-	for balance-w.pricePerTask > 0 {
-		log.Println("Enough money to schedule a new task:", balance)
-		if err := w.picker.ScheduleRandom(); err != nil {
-			return false, err
-		}
-		log.Println("New task scheduled")
-		balance -= w.pricePerTask
-		if err := w.broker.ChangeBalance(-w.pricePerTask); err != nil {
-			return false, err
-		}
-		log.Println("Decreased balance")
+	length, err := w.picker.ScheduleRandom(balance)
+	if err != nil {
+		return false, err
 	}
+	if length <= 0 {
+		return false, nil
+	}
+	log.Println("New task scheduled")
+	if err := w.broker.ChangeBalance(-length); err != nil {
+		return false, err
+	}
+	log.Println("Decreased balance")
 	return true, nil
 }

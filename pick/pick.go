@@ -24,7 +24,7 @@ type entry struct {
 // Picker allows access to items and scheduling.
 type Picker interface {
 	GetScheduled() (map[string]data.Course, error)
-	ScheduleRandom() error
+	ScheduleRandom(maxDurationSec int) (int, error)
 	MarkConverted(key string) error
 }
 
@@ -70,11 +70,13 @@ func (p *datastorePicker) MarkConverted(key string) error {
 	return nil
 }
 
-func (p *datastorePicker) ScheduleRandom() error {
+func (p *datastorePicker) ScheduleRandom(maxDurationSec int) (int, error) {
 	// Pick a random (hash-ordered) entry that is not scheduled and not converted yet.
 	query := datastore.NewQuery("Entry").
 		Filter("Converted =", false).
 		Filter("Scheduled =", false).
+		Filter("DurationSec <", maxDurationSec).
+		Order("DurationSec").
 		Order("Hash").
 		Limit(1)
 	var e entry
@@ -82,20 +84,20 @@ func (p *datastorePicker) ScheduleRandom() error {
 	for {
 		key, err := it.Next(&e)
 		for err == iterator.Done {
-			return nil
+			return 0, nil
 		}
 		if err != nil {
-			return fmt.Errorf("failed fetching results: %v", err)
+			return 0, fmt.Errorf("failed fetching results: %v", err)
 		}
 		e.Scheduled = true
 		e.ScheduledTime = time.Now()
 		if _, err := p.client.Put(p.ctx, key, &e); err != nil {
-			return fmt.Errorf("client.Put: %v", err)
+			return 0, fmt.Errorf("client.Put: %v", err)
 		}
 		break
 	}
 
-	return nil
+	return e.DurationSec, nil
 }
 
 func (p *datastorePicker) GetScheduled() (map[string]data.Course, error) {

@@ -16,10 +16,11 @@ import (
 type fakePicker struct {
 	scheduledCourses map[string]data.Course
 	convertedKey     string
+	scheduledLength  int
 }
 
-func (p *fakePicker) ScheduleRandom() error {
-	return nil
+func (p *fakePicker) ScheduleRandom(int) (int, error) {
+	return p.scheduledLength, nil
 }
 
 func (p *fakePicker) GetScheduled() (map[string]data.Course, error) {
@@ -95,18 +96,24 @@ func TestMaybeSchedule(t *testing.T) {
 		{
 			msg: "balance ok",
 			w: Worker{
-				broker:       &fakeBroker{balance: 50},
-				picker:       &fakePicker{},
-				pricePerTask: 5,
+				broker: &fakeBroker{balance: 50},
+				picker: &fakePicker{scheduledLength: 10},
 			},
 			taskScheduled: true,
 			wantError:     false,
 		}, {
 			msg: "not enough balance",
 			w: Worker{
-				broker:       &fakeBroker{balance: 3},
-				picker:       &fakePicker{},
-				pricePerTask: 5,
+				broker: &fakeBroker{balance: 0},
+				picker: &fakePicker{},
+			},
+			taskScheduled: false,
+			wantError:     false,
+		}, {
+			msg: "nothing to schedule",
+			w: Worker{
+				broker: &fakeBroker{balance: 10},
+				picker: &fakePicker{},
 			},
 			taskScheduled: false,
 			wantError:     false,
@@ -117,8 +124,7 @@ func TestMaybeSchedule(t *testing.T) {
 					balance:         50,
 					getBalanceError: fmt.Errorf("not connected"),
 				},
-				picker:       &fakePicker{},
-				pricePerTask: 5,
+				picker: &fakePicker{},
 			},
 			taskScheduled: false,
 			wantError:     true,

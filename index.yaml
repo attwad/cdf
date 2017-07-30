@@ -3,4 +3,5 @@ indexes:
   properties:
     - name: Converted
     - name: Scheduled
+    - name: DurationSec
     - name: Hash

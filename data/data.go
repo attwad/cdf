@@ -26,6 +26,8 @@ type Course struct {
 	Language string `json:"lang"`
 	// Where this course was crawled from, "https://www.college-de-france.fr/site/anne-cheng/symposium-2017-06-23-16h15.htm".
 	Source string `json:"source_url"`
+	// DurationSec is how long the audio file is.
+	DurationSec int `json:"duration"`
 	// When this course was scraped.
 	Scraped time.Time `json:"-"`
 }
