@@ -60,6 +60,7 @@ func (p *datastorePicker) MarkConverted(key string) error {
 		return fmt.Errorf("tx.Get: %v", err)
 	}
 	e.Converted = true
+	e.Scheduled = false
 	if _, err := tx.Put(k, &e); err != nil {
 		return fmt.Errorf("tx.Put: %v", err)
 	}

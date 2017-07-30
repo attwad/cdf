@@ -2,6 +2,7 @@ package indexer
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -67,12 +68,25 @@ func (i *elasticIndexer) Index(c data.Course, sentences []string) error {
 	if err != nil {
 		return err
 	}
-	// TODO: Parse response.
 	defer resp.Body.Close()
-	rb, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
+	type indexResp struct {
+		// Took x ms to index.
+		TookMs int `json:"took"`
+		// HasError or not.
+		HasError bool `json:"errors"`
 	}
-	log.Println("Index response:", string(rb))
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("reading response body: %v", err)
+	}
+	var ir indexResp
+	if err := json.Unmarshal(respBody, &ir); err != nil {
+		return fmt.Errorf("unmarshall response body: %v", err)
+	}
+	log.Println("Indexing took", ir.TookMs, "ms and had errors:", ir.HasError)
+	if ir.HasError {
+		log.Println("Indexing response had an error:", string(respBody))
+		return fmt.Errorf("indexing response had an error")
+	}
 	return nil
 }
