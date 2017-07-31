@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
 	"time"
 
 	"github.com/attwad/cdf/indexer"
@@ -14,10 +15,9 @@ import (
 )
 
 var (
-	projectID   = flag.String("project_id", "", "Project ID")
-	bucket      = flag.String("bucket", "", "Cloud storage bucket")
-	soxPath     = flag.String("sox_path", "sox", "SOX binary path")
-	elasticHost = flag.String("elastic_host", "http://localhost:9200", "address of the elasticsearch instance")
+	projectID = flag.String("project_id", "", "Project ID")
+	bucket    = flag.String("bucket", "", "Cloud storage bucket")
+	soxPath   = flag.String("sox_path", "sox", "SOX binary path")
 )
 
 func main() {
@@ -40,12 +40,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	elasticHostPort := os.Getenv("ELASTICSEARCH_SERVICE_HOST") + ":" + os.Getenv("ELASTICSEARCH_SERVICE_PORT")
+	log.Println("Will connect to elastic instance @", elasticHostPort)
 	a := worker.NewGCPWorker(
 		u,
 		t,
 		b,
 		p,
-		indexer.NewElasticIndexer(*elasticHost),
+		indexer.NewElasticIndexer(elasticHostPort),
 		*soxPath)
 	log.Println("Analyzer created, entering loop...")
 	for {
