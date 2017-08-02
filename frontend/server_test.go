@@ -6,13 +6,15 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/attwad/cdf/data"
 )
 
 type fakeDB struct {
 }
 
-func (d *fakeDB) GetLessons(ctx context.Context, cursor string) (map[string]entry, string, error) {
-	return map[string]entry{"key1": entry{}}, "next cursor", nil
+func (d *fakeDB) GetLessons(ctx context.Context, cursor string) (map[string]data.Entry, string, error) {
+	return map[string]data.Entry{"key1": data.Entry{}}, "next cursor", nil
 }
 
 func TestIndex(t *testing.T) {

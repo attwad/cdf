@@ -12,15 +12,6 @@ import (
 	"cloud.google.com/go/datastore"
 )
 
-// entry is what gets stored in Datastore, it contains a course and special storage only fields.
-type entry struct {
-	data.Course
-	Converted     bool
-	Hash          []byte
-	Scheduled     bool
-	ScheduledTime time.Time
-}
-
 // Picker allows access to items and scheduling.
 type Picker interface {
 	GetScheduled() (map[string]data.Course, error)
@@ -51,7 +42,7 @@ func (p *datastorePicker) MarkConverted(key string) error {
 	if err != nil {
 		return fmt.Errorf("NewTransaction: %v", err)
 	}
-	var e entry
+	var e data.Entry
 	k, err := datastore.DecodeKey(key)
 	if err != nil {
 		return fmt.Errorf("decode key: %s", err)
@@ -79,7 +70,7 @@ func (p *datastorePicker) ScheduleRandom(maxDurationSec int) (int, error) {
 		Order("DurationSec").
 		Order("Hash").
 		Limit(1)
-	var e entry
+	var e data.Entry
 	it := p.client.Run(p.ctx, query)
 	for {
 		key, err := it.Next(&e)
@@ -104,7 +95,7 @@ func (p *datastorePicker) GetScheduled() (map[string]data.Course, error) {
 	// Pick a random (has-ordered) entry that is not scheduled and not converted yet.
 	query := datastore.NewQuery("Entry").
 		Filter("Scheduled =", true)
-	var e entry
+	var e data.Entry
 	it := p.client.Run(p.ctx, query)
 	courses := make(map[string]data.Course, 0)
 	for {

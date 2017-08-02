@@ -7,9 +7,9 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/attwad/cdf/data"
+
 	"google.golang.org/api/iterator"
 
 	"cloud.google.com/go/datastore"
@@ -25,16 +25,8 @@ var (
 )
 
 type indexPage struct {
-	Cursor  string           `json:"cursor"`
-	Entries map[string]entry `json:"entries"`
-}
-
-type entry struct {
-	data.Course
-	Converted     bool
-	Hash          []byte
-	Scheduled     bool
-	ScheduledTime time.Time
+	Cursor  string                `json:"cursor"`
+	Entries map[string]data.Entry `json:"entries"`
 }
 
 type server struct {
@@ -43,15 +35,15 @@ type server struct {
 }
 
 type dbWrapper interface {
-	GetLessons(ctx context.Context, cursorStr string) (map[string]entry, string, error)
+	GetLessons(ctx context.Context, cursorStr string) (map[string]data.Entry, string, error)
 }
 
 type datastoreWrapper struct {
 	client *datastore.Client
 }
 
-func (d *datastoreWrapper) GetLessons(ctx context.Context, cursorStr string) (map[string]entry, string, error) {
-	lessons := make(map[string]entry, 0)
+func (d *datastoreWrapper) GetLessons(ctx context.Context, cursorStr string) (map[string]data.Entry, string, error) {
+	lessons := make(map[string]data.Entry, 0)
 	query := datastore.NewQuery("Entry").Order("-Scraped").Limit(50)
 	if cursorStr != "" {
 		cursor, err := datastore.DecodeCursor(cursorStr)
@@ -60,7 +52,7 @@ func (d *datastoreWrapper) GetLessons(ctx context.Context, cursorStr string) (ma
 		}
 		query = query.Start(cursor)
 	}
-	var e entry
+	var e data.Entry
 	it := d.client.Run(ctx, query)
 	for {
 		key, err := it.Next(&e)
@@ -81,6 +73,7 @@ func (d *datastoreWrapper) GetLessons(ctx context.Context, cursorStr string) (ma
 func (s *server) ServeIndex(w http.ResponseWriter, r *http.Request) {
 	lessons, cursor, err := s.db.GetLessons(s.ctx, r.URL.Query().Get("cursor"))
 	if err != nil {
+		log.Println("Could not read lessosn from db:", err)
 		http.Error(w, "Could not read lessons from DB", http.StatusInternalServerError)
 		return
 	}

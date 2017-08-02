@@ -3,6 +3,7 @@ package data
 import "time"
 
 // Course represents a lesson, colloque, symposium, etc.
+// It represents a superset of what gets indexed by the search engine (anything that has a json field mapped).
 type Course struct {
 	// Title of the course, "What was at Stake in the India-China Opium Trade?".
 	Title string `json:"title"`
@@ -30,6 +31,19 @@ type Course struct {
 	DurationSec int `json:"duration"`
 	// When this course was scraped.
 	Scraped time.Time `json:"-"`
+}
+
+// Entry is what gets stored in Datastore, it contains a course and special storage only fields.
+type Entry struct {
+	Course
+	// Whether the course has been converted yet.
+	Converted bool
+	// The hash to "randomly" pick an entry to convert.
+	Hash []byte
+	// Whether it is scheduled for conversion.
+	Scheduled bool
+	// When it was scheduled for conversion if applicable.
+	ScheduledTime time.Time
 }
 
 // Hints returns a list of sentences or words to help speech recognition.
