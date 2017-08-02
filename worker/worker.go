@@ -83,7 +83,7 @@ func (w *Worker) Run() error {
 			for _, b := range t {
 				text = append(text, b.Text)
 			}
-			textName := f.Name() + ".txt"
+			textName := filepath.Base(course.AudioLink) + ".txt"
 			log.Println("Saving text to", textName)
 			log.Println(text)
 			if err := w.uploader.UploadFile(strings.NewReader(strings.Join(text, " ")), filepath.Base(textName)); err != nil {
