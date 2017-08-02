@@ -73,7 +73,7 @@ func (d *datastoreWrapper) GetLessons(ctx context.Context, cursorStr string) (ma
 func (s *server) ServeIndex(w http.ResponseWriter, r *http.Request) {
 	lessons, cursor, err := s.db.GetLessons(s.ctx, r.URL.Query().Get("cursor"))
 	if err != nil {
-		log.Println("Could not read lessosn from db:", err)
+		log.Println("Could not read lessons from db:", err)
 		http.Error(w, "Could not read lessons from DB", http.StatusInternalServerError)
 		return
 	}
