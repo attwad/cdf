@@ -10,17 +10,17 @@ type Course struct {
 	// Lecturer, "John Doe".
 	Lecturer string `json:"lecturer"`
 	// Function of the lecturer, "EHESS, Paris".
-	Function string `json:"function,omitempty"`
+	Function string `json:"-"`
 	// Date of the course, UTC.
-	Date time.Time
+	Date time.Time `json:"-"`
 	// Type of the course. "Colloque", "Lesson inaugurale", etc.
-	LessonType string `json:"lesson_type"`
+	LessonType string `json:"-"`
 	// Title of the colloque / yearly lesson. "Inde-Chine : Universalités croisées".
-	TypeTitle string `json:"type_title,omitempty"`
+	TypeTitle string `json:"-"`
 	// Video link if present.
 	VideoLink string `json:"-"`
 	// Audio link.
-	AudioLink string `json:"audio_link"`
+	AudioLink string `json:"-"`
 	// Title of the chaire. "Histoire intellectuelle de la Chine".
 	Chaire string `json:"chaire"`
 	// Language of the audio. ("fr", "en", etc.)
@@ -28,7 +28,7 @@ type Course struct {
 	// Where this course was crawled from, "https://www.college-de-france.fr/site/anne-cheng/symposium-2017-06-23-16h15.htm".
 	Source string `json:"source_url"`
 	// DurationSec is how long the audio file is.
-	DurationSec int `json:"duration"`
+	DurationSec int `json:"-"`
 	// When this course was scraped.
 	Scraped time.Time `json:"-"`
 }
