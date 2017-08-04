@@ -1,0 +1,7 @@
+{{ template "head.html" . }}
+<body>
+  {{ template "searchbar.html" . }}
+  <div>Took {{.TookMs}}ms</div>
+  <div>Timed out: {{.TimedOut}}</div>
+  {{ template "footer.html" . }}
+</body>

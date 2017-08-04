@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"io/ioutil"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/attwad/cdf/data"
 )
@@ -33,4 +35,25 @@ func TestIndex(t *testing.T) {
 	if !strings.Contains(string(body), "next%20cursor") {
 		t.Errorf("Expected next cursor link but was not found: %s", string(body))
 	}
+}
+
+func TestSearch(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	}))
+	defer ts.Close()
+
+	db := &fakeDB{}
+	s := &server{
+		ctx: context.Background(),
+		httpClient: &http.Client{
+			Timeout: time.Second * 2,
+		},
+		db:             db,
+		elasticAddress: ts.URL,
+	}
+	req := httptest.NewRequest("GET", "/search?q=myquery", nil)
+	w := httptest.NewRecorder()
+	s.ServeSearch(w, req)
+
+	// TODO: Check resp.
 }

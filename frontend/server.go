@@ -1,12 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
+	"strings"
+	"time"
 
 	"github.com/attwad/cdf/data"
 
@@ -30,8 +35,10 @@ type indexPage struct {
 }
 
 type server struct {
-	ctx context.Context
-	db  dbWrapper
+	ctx            context.Context
+	db             dbWrapper
+	httpClient     *http.Client
+	elasticAddress string
 }
 
 type dbWrapper interface {
@@ -86,6 +93,88 @@ func (s *server) ServeIndex(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *server) ServeSearch(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query().Get("q")
+	if strings.TrimSpace(q) == "" {
+		http.Error(w, "empty query", http.StatusBadRequest)
+		return
+	}
+	u, err := url.Parse(s.elasticAddress)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	u.Path = "_search"
+	type simpleQueryString struct {
+		Query           string   `json:"query"`
+		Analyzer        string   `json:"analyzer"`
+		Fields          []string `json:"fields"`
+		DefaultOperator string   `json:"default_operator"`
+	}
+	type searchQuery struct {
+		SimpleQueryString simpleQueryString `json:"simple_query_string"`
+	}
+	type searchRequest struct {
+		Query searchQuery `json:"query"`
+	}
+	body := &searchRequest{
+		Query: searchQuery{
+			SimpleQueryString: simpleQueryString{
+				Query:           q,
+				Analyzer:        "french",
+				Fields:          []string{"transcript"},
+				DefaultOperator: "and",
+			},
+		},
+	}
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	req, err := http.NewRequest("GET", u.String(), bytes.NewReader(jsonBody))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+	type source struct {
+		Title      string `json:"title"`
+		Lecturer   string `json:"lecturer"`
+		Chaire     string `json:"chaire"`
+		Type       string `json:"type"`
+		Transcript string `json:"transcript"`
+	}
+	type hit struct {
+		Source source `json:"_source"`
+	}
+	type hits struct {
+		Total int   `json:"total"`
+		Hits  []hit `json:"hits"`
+	}
+	type searchResponse struct {
+		TookMs   int  `json:"took"`
+		TimedOut bool `json:"timed_out"`
+		Hits     hits
+	}
+	var sr searchResponse
+	if err := json.NewDecoder(resp.Body).Decode(&sr); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := tmpl.ExecuteTemplate(w, "search.html", &sr); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 func main() {
 	ctx := context.Background()
 	client, err := datastore.NewClient(ctx, *projectID)
@@ -96,8 +185,13 @@ func main() {
 	s := &server{
 		ctx: ctx,
 		db:  &datastoreWrapper{client: client},
+		httpClient: &http.Client{
+			Timeout: time.Second * 2,
+		},
+		elasticAddress: "http://127.0.0.1:9200",
 	}
 	http.HandleFunc("/", s.ServeIndex)
+	http.HandleFunc("/search", s.ServeSearch)
 
 	log.Fatal(http.ListenAndServe(*hostPort, nil))
 }
