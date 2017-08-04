@@ -3,5 +3,31 @@
   {{ template "searchbar.html" . }}
   <div>Took {{.TookMs}}ms</div>
   <div>Timed out: {{.TimedOut}}</div>
+  <div class="mdl-grid">
+    {{ range $source := .Sources }}
+    <div class="mdl-cell mdl-cell--4-col mdl-cell--stretch">
+      <div class="mdl-card mdl-shadow--2dp">
+        <div class="mdl-card__title">
+          <h2 class="mdl-card__title-text">{{$source.Title}}</h2>
+        </div>
+        <div class="mdl-card__supporting-text">
+          <div>{{$source.Transcript}}</div>
+        </div>
+        <div class="mdl-card__actions mdl-card--border">
+          <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect"
+             href="{{$source.URL}}">
+            View on <i>College de France</i> website
+          </a>
+          <div class="mdl-layout-spacer"></div>
+          Chaire: {{$source.Chaire}}<br>
+          Lecturer: {{$source.Lecturer}}<br>
+          {{ if $source.Language }}
+          Language: {{$source.Language}}<br>
+          {{ end }}
+        </div>
+      </div>
+    </div>
+    {{ end }}
+  </div>
   {{ template "footer.html" . }}
 </body>

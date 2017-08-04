@@ -150,6 +150,8 @@ func (s *server) ServeSearch(w http.ResponseWriter, r *http.Request) {
 		Lecturer   string `json:"lecturer"`
 		Chaire     string `json:"chaire"`
 		Type       string `json:"type"`
+		Language   string `json:"lang"`
+		URL        string `json:"source_url"`
 		Transcript string `json:"transcript"`
 	}
 	type hit struct {
@@ -159,15 +161,28 @@ func (s *server) ServeSearch(w http.ResponseWriter, r *http.Request) {
 		Total int   `json:"total"`
 		Hits  []hit `json:"hits"`
 	}
-	type searchResponse struct {
+	type jsonSearchResponse struct {
 		TookMs   int  `json:"took"`
 		TimedOut bool `json:"timed_out"`
 		Hits     hits
 	}
-	var sr searchResponse
-	if err := json.NewDecoder(resp.Body).Decode(&sr); err != nil {
+	type searchResponse struct {
+		TookMs   int  `json:"took"`
+		TimedOut bool `json:"timed_out"`
+		Sources  []source
+	}
+	var jsr jsonSearchResponse
+	if err := json.NewDecoder(resp.Body).Decode(&jsr); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	sr := searchResponse{
+		TookMs:   jsr.TookMs,
+		TimedOut: jsr.TimedOut,
+		Sources:  make([]source, 0),
+	}
+	for _, hit := range jsr.Hits.Hits {
+		sr.Sources = append(sr.Sources, hit.Source)
 	}
 	if err := tmpl.ExecuteTemplate(w, "search.html", &sr); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
