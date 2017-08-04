@@ -30,8 +30,9 @@ var (
 )
 
 type indexPage struct {
-	Cursor  string                `json:"cursor"`
-	Entries map[string]data.Entry `json:"entries"`
+	Query   string
+	Cursor  string
+	Entries map[string]data.Entry
 }
 
 type server struct {
@@ -85,6 +86,7 @@ func (s *server) ServeIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := tmpl.ExecuteTemplate(w, "index.html", &indexPage{
+		Query:   "",
 		Entries: lessons,
 		Cursor:  cursor,
 	}); err != nil {
@@ -166,17 +168,19 @@ func (s *server) ServeSearch(w http.ResponseWriter, r *http.Request) {
 		TimedOut bool `json:"timed_out"`
 		Hits     hits
 	}
-	type searchResponse struct {
-		TookMs   int  `json:"took"`
-		TimedOut bool `json:"timed_out"`
-		Sources  []source
-	}
 	var jsr jsonSearchResponse
 	if err := json.NewDecoder(resp.Body).Decode(&jsr); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	type searchResponse struct {
+		Query    string
+		TookMs   int
+		TimedOut bool
+		Sources  []source
+	}
 	sr := searchResponse{
+		Query:    q,
 		TookMs:   jsr.TookMs,
 		TimedOut: jsr.TimedOut,
 		Sources:  make([]source, 0),

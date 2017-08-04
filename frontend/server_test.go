@@ -110,7 +110,7 @@ func TestSearch(t *testing.T) {
 	resp := w.Result()
 	body, _ := ioutil.ReadAll(resp.Body)
 
-	if !strings.Contains(string(body), "Took 112ms") {
-		t.Errorf("Expected body to contain 'Tood 112ms' but did not: %s", string(body))
+	if !strings.Contains(string(body), "took 112ms") {
+		t.Errorf("Expected body to contain 'took 112ms' but did not: %s", string(body))
 	}
 }
