@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -213,6 +214,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	elasticHostPort := os.Getenv("ELASTICSEARCH_SERVICE_HOST") + ":" + os.Getenv("ELASTICSEARCH_SERVICE_PORT")
 	s := &server{
 		ctx: ctx,
 		db:  &datastoreWrapper{client: client},
@@ -220,7 +222,7 @@ func main() {
 			httpClient: &http.Client{
 				Timeout: time.Second * 2,
 			},
-			elasticAddress: "http://127.0.0.1:9200",
+			elasticAddress: elasticHostPort,
 		},
 	}
 	http.HandleFunc("/", s.ServeIndex)
