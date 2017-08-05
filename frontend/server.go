@@ -36,10 +36,90 @@ type indexPage struct {
 }
 
 type server struct {
-	ctx            context.Context
-	db             dbWrapper
+	ctx      context.Context
+	db       dbWrapper
+	searcher Searcher
+}
+
+type source struct {
+	Title      string `json:"title"`
+	Lecturer   string `json:"lecturer"`
+	Chaire     string `json:"chaire"`
+	Type       string `json:"type"`
+	Language   string `json:"lang"`
+	URL        string `json:"source_url"`
+	Transcript string `json:"transcript"`
+}
+type hit struct {
+	Source source `json:"_source"`
+}
+type hits struct {
+	Total int   `json:"total"`
+	Hits  []hit `json:"hits"`
+}
+type JsonSearchResponse struct {
+	TookMs   int  `json:"took"`
+	TimedOut bool `json:"timed_out"`
+	Hits     hits
+}
+
+type Searcher interface {
+	Search(string) (*JsonSearchResponse, error)
+}
+
+type elasticSearcher struct {
 	httpClient     *http.Client
 	elasticAddress string
+}
+
+func (e *elasticSearcher) Search(q string) (*JsonSearchResponse, error) {
+	u, err := url.Parse(e.elasticAddress)
+	if err != nil {
+		return nil, err
+	}
+	u.Path = "_search"
+	type simpleQueryString struct {
+		Query           string   `json:"query"`
+		Analyzer        string   `json:"analyzer"`
+		Fields          []string `json:"fields"`
+		DefaultOperator string   `json:"default_operator"`
+	}
+	type searchQuery struct {
+		SimpleQueryString simpleQueryString `json:"simple_query_string"`
+	}
+	type searchRequest struct {
+		Query searchQuery `json:"query"`
+	}
+	body := &searchRequest{
+		Query: searchQuery{
+			SimpleQueryString: simpleQueryString{
+				Query:           q,
+				Analyzer:        "french",
+				Fields:          []string{"transcript"},
+				DefaultOperator: "and",
+			},
+		},
+	}
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest("GET", u.String(), bytes.NewReader(jsonBody))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := e.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var jsr JsonSearchResponse
+	if err := json.NewDecoder(resp.Body).Decode(&jsr); err != nil {
+		return nil, err
+	}
+	return &jsr, nil
 }
 
 type dbWrapper interface {
@@ -101,77 +181,9 @@ func (s *server) ServeSearch(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "empty query", http.StatusBadRequest)
 		return
 	}
-	u, err := url.Parse(s.elasticAddress)
+	jsr, err := s.searcher.Search(q)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	u.Path = "_search"
-	type simpleQueryString struct {
-		Query           string   `json:"query"`
-		Analyzer        string   `json:"analyzer"`
-		Fields          []string `json:"fields"`
-		DefaultOperator string   `json:"default_operator"`
-	}
-	type searchQuery struct {
-		SimpleQueryString simpleQueryString `json:"simple_query_string"`
-	}
-	type searchRequest struct {
-		Query searchQuery `json:"query"`
-	}
-	body := &searchRequest{
-		Query: searchQuery{
-			SimpleQueryString: simpleQueryString{
-				Query:           q,
-				Analyzer:        "french",
-				Fields:          []string{"transcript"},
-				DefaultOperator: "and",
-			},
-		},
-	}
-	jsonBody, err := json.Marshal(body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	req, err := http.NewRequest("GET", u.String(), bytes.NewReader(jsonBody))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer resp.Body.Close()
-	type source struct {
-		Title      string `json:"title"`
-		Lecturer   string `json:"lecturer"`
-		Chaire     string `json:"chaire"`
-		Type       string `json:"type"`
-		Language   string `json:"lang"`
-		URL        string `json:"source_url"`
-		Transcript string `json:"transcript"`
-	}
-	type hit struct {
-		Source source `json:"_source"`
-	}
-	type hits struct {
-		Total int   `json:"total"`
-		Hits  []hit `json:"hits"`
-	}
-	type jsonSearchResponse struct {
-		TookMs   int  `json:"took"`
-		TimedOut bool `json:"timed_out"`
-		Hits     hits
-	}
-	var jsr jsonSearchResponse
-	if err := json.NewDecoder(resp.Body).Decode(&jsr); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
 	}
 	type searchResponse struct {
 		Query    string
@@ -204,10 +216,12 @@ func main() {
 	s := &server{
 		ctx: ctx,
 		db:  &datastoreWrapper{client: client},
-		httpClient: &http.Client{
-			Timeout: time.Second * 2,
+		searcher: &elasticSearcher{
+			httpClient: &http.Client{
+				Timeout: time.Second * 2,
+			},
+			elasticAddress: "http://127.0.0.1:9200",
 		},
-		elasticAddress: "http://127.0.0.1:9200",
 	}
 	http.HandleFunc("/", s.ServeIndex)
 	http.HandleFunc("/search", s.ServeSearch)

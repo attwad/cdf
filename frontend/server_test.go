@@ -97,11 +97,13 @@ func TestSearch(t *testing.T) {
 	db := &fakeDB{}
 	s := &server{
 		ctx: context.Background(),
-		httpClient: &http.Client{
-			Timeout: time.Second * 2,
+		searcher: &elasticSearcher{
+			httpClient: &http.Client{
+				Timeout: time.Second * 2,
+			},
+			elasticAddress: ts.URL,
 		},
-		db:             db,
-		elasticAddress: ts.URL,
+		db: db,
 	}
 	req := httptest.NewRequest("GET", "/search?q=myquery", nil)
 	w := httptest.NewRecorder()
