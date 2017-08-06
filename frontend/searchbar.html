@@ -1,13 +1,20 @@
 <div class="mdl-grid">
   <div class="mdl-cell mdl-cell--4-col">
-    <div class="search-bar">
-      <form action="/search">
-        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label"
-        style="width: 100%">
-          <input class="mdl-textfield__input" type="text" id="q" name="q" value="{{.Query}}">
-          <label class="mdl-textfield__label" for="q">Search audio corpus...</label>
-        </div>
-      </form>
+    <div class="mdl-card mdl-shadow--2dp" style="width:100%">
+      <div class="mdl-card__title">
+        <h2 class="mdl-card__title-text">Search audio transcriptions</h2>
+      </div>
+      <div class="mdl-card__supporting-text">
+          You can search audio transcriptions of the College De France lessons.
+          See the syntax here.
+          <form action="/search">
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label"
+              style="width:100%">
+              <input autofocus class="mdl-textfield__input" type="text" id="q" name="q" value="{{.Query}}">
+              <label class="mdl-textfield__label" for="q">Search audio corpus...</label>
+            </div>
+          </form>
+      </div>
     </div>
   </div>
 </div>

@@ -17,9 +17,18 @@
           Lesson subject: {{$lesson.TypeTitle}}<br>
           {{$lesson.DurationSec}} sec.
         </div>
-        <div class="mdl-card__actions mdl-card--border">
-          <div>Converted: {{$lesson.Converted}}</div>
-          <div>Scheduled: {{$lesson.Scheduled}}</div>
+        <div class="mdl-card__menu">
+          {{ if $lesson.Converted }}
+          <div id="{{$key}}-done-id" class="icon material-icons">done</div>
+          <div class="mdl-tooltip" data-mdl-for="{{$key}}-done-id">
+          This lesson has been transcribed
+          </div>
+          {{ else if $lesson.Scheduled }}
+          <div id="{{$key}}-sched-id" class="icon material-icons">hourglass_empty</div>
+          <div class="mdl-tooltip" data-mdl-for="{{$key}}-sched-id">
+          This lesson has been scheduled for transcription
+          </div>
+          {{ end }}
         </div>
       </div>
     </div>
