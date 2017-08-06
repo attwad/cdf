@@ -185,6 +185,7 @@ func (s *server) ServeSearch(w http.ResponseWriter, r *http.Request) {
 	jsr, err := s.searcher.Search(q)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	type searchResponse struct {
 		Query    string
@@ -214,7 +215,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	elasticHostPort := os.Getenv("ELASTICSEARCH_SERVICE_HOST") + ":" + os.Getenv("ELASTICSEARCH_SERVICE_PORT")
+	elasticHostPort := "http://" + os.Getenv("ELASTICSEARCH_SERVICE_HOST") + ":" + os.Getenv("ELASTICSEARCH_SERVICE_PORT")
 	s := &server{
 		ctx: ctx,
 		db:  &datastoreWrapper{client: client},
