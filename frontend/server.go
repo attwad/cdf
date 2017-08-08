@@ -21,7 +21,7 @@ import (
 	"cloud.google.com/go/datastore"
 )
 
-const pageSize = 50
+const pageSize = 15
 
 var (
 	hostPort  = flag.String("listen_addr", "127.0.0.1:8080", "Address to listen on.")
@@ -31,8 +31,9 @@ var (
 )
 
 type indexPage struct {
-	Query   string
-	Cursor  string
+	Query  string
+	Cursor string
+	// TODO: map iteration is non deterministic, feels weird on page reloads...
 	Entries map[string]data.Entry
 }
 
@@ -133,13 +134,16 @@ type datastoreWrapper struct {
 
 func (d *datastoreWrapper) GetLessons(ctx context.Context, cursorStr string) (map[string]data.Entry, string, error) {
 	lessons := make(map[string]data.Entry, 0)
-	query := datastore.NewQuery("Entry").Order("-Scraped").Limit(50)
+	query := datastore.NewQuery("Entry").Order("-Scraped").Limit(pageSize)
 	if cursorStr != "" {
 		cursor, err := datastore.DecodeCursor(cursorStr)
 		if err != nil {
 			return nil, "", fmt.Errorf("bad cursor %q: %v", cursorStr, err)
 		}
 		query = query.Start(cursor)
+		log.Println("with cursor")
+	} else {
+		log.Println("No cursor")
 	}
 	var e data.Entry
 	it := d.client.Run(ctx, query)
@@ -172,6 +176,34 @@ func (s *server) ServeIndex(w http.ResponseWriter, r *http.Request) {
 		Cursor:  cursor,
 	}); err != nil {
 		http.Error(w, "Could not write template", http.StatusInternalServerError)
+		return
+	}
+}
+
+func (s *server) APIServeLessons(w http.ResponseWriter, r *http.Request) {
+	lessons, cursor, err := s.db.GetLessons(s.ctx, r.URL.Query().Get("cursor"))
+	if err != nil {
+		log.Println("Could not read lessons from db:", err)
+		http.Error(w, "Could not read lessons from DB", http.StatusInternalServerError)
+		return
+	}
+	type lesson struct {
+		data.Entry
+		Key string `json:"key"`
+	}
+	keyedLessons := make([]lesson, 0)
+	for k, l := range lessons {
+		keyedLessons = append(keyedLessons, lesson{l, k})
+	}
+	type response struct {
+		Cursor  string   `json:"cursor"`
+		Lessons []lesson `json:"lessons"`
+	}
+	w.Header().Set("Content-Type", "application/json")
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(&response{cursor, keyedLessons}); err != nil {
+		log.Println("Could not write json output:", err)
+		http.Error(w, "Could not write json", http.StatusInternalServerError)
 		return
 	}
 }
@@ -228,6 +260,7 @@ func main() {
 	}
 	http.HandleFunc("/", s.ServeIndex)
 	http.HandleFunc("/search", s.ServeSearch)
+	http.HandleFunc("/api/lessons", s.APIServeLessons)
 
 	log.Fatal(http.ListenAndServe(*hostPort, nil))
 }
