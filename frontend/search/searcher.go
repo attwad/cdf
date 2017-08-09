@@ -25,7 +25,7 @@ type hits struct {
 	Hits  []hit `json:"hits"`
 }
 
-type JsonSearchResponse struct {
+type Response struct {
 	TookMs   int  `json:"took"`
 	TimedOut bool `json:"timed_out"`
 	Hits     hits
@@ -33,7 +33,7 @@ type JsonSearchResponse struct {
 
 // Searcher allows free-text search over the transcripts.
 type Searcher interface {
-	Search(string) (*JsonSearchResponse, error)
+	Search(string) (*Response, error)
 }
 
 type elasticSearcher struct {
@@ -50,7 +50,7 @@ func NewElasticSearcher(elasticAddress string) Searcher {
 	}
 }
 
-func (e *elasticSearcher) Search(q string) (*JsonSearchResponse, error) {
+func (e *elasticSearcher) Search(q string) (*Response, error) {
 	u, err := url.Parse(e.elasticAddress)
 	if err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ func (e *elasticSearcher) Search(q string) (*JsonSearchResponse, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	var jsr JsonSearchResponse
+	var jsr Response
 	if err := json.NewDecoder(resp.Body).Decode(&jsr); err != nil {
 		return nil, err
 	}
