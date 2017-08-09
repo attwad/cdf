@@ -11,14 +11,9 @@ import (
 	"os"
 
 	"github.com/attwad/cdf/data"
+	"github.com/attwad/cdf/frontend/db"
 	"github.com/attwad/cdf/frontend/search"
-
-	"google.golang.org/api/iterator"
-
-	"cloud.google.com/go/datastore"
 )
-
-const pageSize = 15
 
 var (
 	hostPort  = flag.String("listen_addr", "127.0.0.1:8080", "Address to listen on.")
@@ -29,44 +24,8 @@ var (
 
 type server struct {
 	ctx      context.Context
-	db       dbWrapper
+	db       db.DBWrapper
 	searcher search.Searcher
-}
-
-type dbWrapper interface {
-	GetLessons(ctx context.Context, cursorStr string) ([]data.Entry, string, error)
-}
-
-type datastoreWrapper struct {
-	client *datastore.Client
-}
-
-func (d *datastoreWrapper) GetLessons(ctx context.Context, cursorStr string) ([]data.Entry, string, error) {
-	lessons := make([]data.Entry, 0)
-	query := datastore.NewQuery("Entry").Order("-Scraped").Limit(pageSize)
-	if cursorStr != "" {
-		cursor, err := datastore.DecodeCursor(cursorStr)
-		if err != nil {
-			return nil, "", fmt.Errorf("bad cursor %q: %v", cursorStr, err)
-		}
-		query = query.Start(cursor)
-	}
-	var e data.Entry
-	it := d.client.Run(ctx, query)
-	for {
-		_, err := it.Next(&e)
-		for err == iterator.Done {
-			nextCursor, errc := it.Cursor()
-			if errc != nil {
-				return nil, "", fmt.Errorf("getting next cursor: %v", errc)
-			}
-			return lessons, nextCursor.String(), nil
-		}
-		if err != nil {
-			return nil, "", fmt.Errorf("failed fetching results: %v", err)
-		}
-		lessons = append(lessons, e)
-	}
 }
 
 func (s *server) APIServeLessons(w http.ResponseWriter, r *http.Request) {
@@ -77,12 +36,20 @@ func (s *server) APIServeLessons(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type response struct {
-		Cursor  string       `json:"cursor"`
-		Lessons []data.Entry `json:"lessons"`
+		Cursor  string                `json:"cursor"`
+		Lessons []data.ExternalCourse `json:"lessons"`
+	}
+	resp := &response{Cursor: cursor, Lessons: make([]data.ExternalCourse, 0)}
+	for _, lesson := range lessons {
+		resp.Lessons = append(resp.Lessons, data.ExternalCourse{
+			Course:            lesson.Course,
+			FormattedDate:     fmt.Sprintf("%d/%d/%d", lesson.Date.Day(), lesson.Date.Month(), lesson.Date.Year()),
+			FormattedDuration: fmt.Sprintf("%d min.", lesson.DurationSec/60),
+		})
 	}
 	w.Header().Set("Content-Type", "application/json")
 	enc := json.NewEncoder(w)
-	if err := enc.Encode(&response{cursor, lessons}); err != nil {
+	if err := enc.Encode(resp); err != nil {
 		log.Println("Could not write json output:", err)
 		http.Error(w, "Could not write json", http.StatusInternalServerError)
 		return
@@ -124,15 +91,15 @@ func (s *server) ServeSearch(w http.ResponseWriter, r *http.Request) {
 */
 func main() {
 	ctx := context.Background()
-	client, err := datastore.NewClient(ctx, *projectID)
-	if err != nil {
-		log.Fatal(err)
-	}
 
+	dbWrapper, err := db.NewDatastoreWrapper(ctx, *projectID)
+	if err != nil {
+		log.Fatalf("creating db wrapper: %v", err)
+	}
 	elasticHostPort := "http://" + os.Getenv("ELASTICSEARCH_SERVICE_HOST") + ":" + os.Getenv("ELASTICSEARCH_SERVICE_PORT")
 	s := &server{
 		ctx:      ctx,
-		db:       &datastoreWrapper{client: client},
+		db:       dbWrapper,
 		searcher: search.NewElasticSearcher(elasticHostPort),
 	}
 	http.HandleFunc("/api/lessons", s.APIServeLessons)

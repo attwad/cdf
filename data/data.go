@@ -10,13 +10,13 @@ type Course struct {
 	// Lecturer, "John Doe".
 	Lecturer string `json:"lecturer"`
 	// Function of the lecturer, "EHESS, Paris".
-	Function string `json:"-"`
+	Function string `json:"function"`
 	// Date of the course, UTC.
 	Date time.Time `json:"-"`
 	// Type of the course. "Colloque", "Lesson inaugurale", etc.
-	LessonType string `json:"-"`
+	LessonType string `json:"lesson_type,omitempty"`
 	// Title of the colloque / yearly lesson. "Inde-Chine : Universalités croisées".
-	TypeTitle string `json:"-"`
+	TypeTitle string `json:"type_title,omitempty"`
 	// Video link if present.
 	VideoLink string `json:"-"`
 	// Audio link.
@@ -24,7 +24,7 @@ type Course struct {
 	// Title of the chaire. "Histoire intellectuelle de la Chine".
 	Chaire string `json:"chaire"`
 	// Language of the audio. ("fr", "en", etc.)
-	Language string `json:"lang"`
+	Language string `json:"lang,omitempty"`
 	// Where this course was crawled from, "https://www.college-de-france.fr/site/anne-cheng/symposium-2017-06-23-16h15.htm".
 	Source string `json:"source_url"`
 	// DurationSec is how long the audio file is.
@@ -44,6 +44,13 @@ type Entry struct {
 	Scheduled bool
 	// When it was scheduled for conversion if applicable.
 	ScheduledTime time.Time
+}
+
+// ExternalCourse is what gets sent to clients, it contains formatted durations, dates etc.
+type ExternalCourse struct {
+	Course
+	FormattedDate     string `json:"date"`
+	FormattedDuration string `json:"duration"`
 }
 
 // Hints returns a list of sentences or words to help speech recognition.

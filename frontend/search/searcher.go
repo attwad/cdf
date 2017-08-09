@@ -13,6 +13,7 @@ type source struct {
 	Lecturer   string `json:"lecturer"`
 	Chaire     string `json:"chaire"`
 	Type       string `json:"type"`
+	TypeTitle  string `json:"type_title"`
 	Language   string `json:"lang"`
 	URL        string `json:"source_url"`
 	Transcript string `json:"transcript"`
@@ -25,6 +26,7 @@ type hits struct {
 	Hits  []hit `json:"hits"`
 }
 
+// Response is what gets returned by a Search request.
 type Response struct {
 	TookMs   int  `json:"took"`
 	TimedOut bool `json:"timed_out"`
