@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/attwad/cdf/data"
 	"github.com/attwad/cdf/frontend/db"
@@ -56,8 +57,7 @@ func (s *server) APIServeLessons(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-/*
-func (s *server) ServeSearch(w http.ResponseWriter, r *http.Request) {
+func (s *server) APIServeSearch(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
 	if strings.TrimSpace(q) == "" {
 		http.Error(w, "empty query", http.StatusBadRequest)
@@ -72,23 +72,26 @@ func (s *server) ServeSearch(w http.ResponseWriter, r *http.Request) {
 		Query    string
 		TookMs   int
 		TimedOut bool
-		Sources  []source
+		Sources  []search.Source
 	}
 	sr := searchResponse{
 		Query:    q,
 		TookMs:   jsr.TookMs,
 		TimedOut: jsr.TimedOut,
-		Sources:  make([]source, 0),
+		Sources:  make([]search.Source, 0),
 	}
 	for _, hit := range jsr.Hits.Hits {
 		sr.Sources = append(sr.Sources, hit.Source)
 	}
-	if err := tmpl.ExecuteTemplate(w, "search.html", &sr); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	w.Header().Set("Content-Type", "application/json")
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(sr); err != nil {
+		log.Println("Could not write json output:", err)
+		http.Error(w, "Could not write json", http.StatusInternalServerError)
 		return
 	}
 }
-*/
+
 func main() {
 	ctx := context.Background()
 
@@ -103,6 +106,7 @@ func main() {
 		searcher: search.NewElasticSearcher(elasticHostPort),
 	}
 	http.HandleFunc("/api/lessons", s.APIServeLessons)
+	http.HandleFunc("/api/search", s.APIServeSearch)
 
 	log.Fatal(http.ListenAndServe(*hostPort, nil))
 }

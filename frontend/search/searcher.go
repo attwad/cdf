@@ -8,7 +8,8 @@ import (
 	"time"
 )
 
-type source struct {
+// Source is a source indexed by the search engine.
+type Source struct {
 	Title      string `json:"title"`
 	Lecturer   string `json:"lecturer"`
 	Chaire     string `json:"chaire"`
@@ -19,7 +20,7 @@ type source struct {
 	Transcript string `json:"transcript"`
 }
 type hit struct {
-	Source source `json:"_source"`
+	Source Source `json:"_source"`
 }
 type hits struct {
 	Total int   `json:"total"`
