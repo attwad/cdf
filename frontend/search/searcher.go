@@ -41,6 +41,7 @@ type elasticSearcher struct {
 	elasticAddress string
 }
 
+// NewElasticSearcher creates a new Searcher connected to the given elastic search instance at the given address.
 func NewElasticSearcher(elasticAddress string) Searcher {
 	return &elasticSearcher{
 		httpClient: &http.Client{

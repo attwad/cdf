@@ -56,9 +56,9 @@ func (d *datastoreWrapper) GetLessons(ctx context.Context, cursorStr string) ([]
 	for {
 		_, err := it.Next(&e)
 		for err == iterator.Done {
-			nextCursor, err := it.Cursor()
-			if err != nil {
-				return nil, "", fmt.Errorf("getting next cursor: %v", err)
+			nextCursor, errc := it.Cursor()
+			if errc != nil {
+				return nil, "", fmt.Errorf("getting next cursor: %v", errc)
 			}
 			return lessons, nextCursor.String(), nil
 		}
