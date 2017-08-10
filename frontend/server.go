@@ -69,10 +69,10 @@ func (s *server) APIServeSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type searchResponse struct {
-		Query    string
-		TookMs   int
-		TimedOut bool
-		Sources  []search.Source
+		Query    string          `json:"query"`
+		TookMs   int             `json:"took_ms"`
+		TimedOut bool            `json:"timed_out"`
+		Sources  []search.Source `json:"sources"`
 	}
 	sr := searchResponse{
 		Query:    q,
