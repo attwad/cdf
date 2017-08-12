@@ -11,15 +11,17 @@ import (
 
 const pageSize = 15
 
-type DBWrapper interface {
-	GetLessons(ctx context.Context, cursorStr string) ([]data.Entry, string, error)
+// Wrapper wraps the datastore for easire testing.
+type Wrapper interface {
+	GetLessons(ctx context.Context, cursorStr string, filter Filter) ([]data.Entry, string, error)
 }
 
 type datastoreWrapper struct {
 	client *datastore.Client
 }
 
-func NewDatastoreWrapper(ctx context.Context, projectID string) (DBWrapper, error) {
+// NewDatastoreWrapper creates a new datastore wrapper with the given context and for the given google cloud project ID.
+func NewDatastoreWrapper(ctx context.Context, projectID string) (Wrapper, error) {
 	client, err := datastore.NewClient(ctx, projectID)
 	if err != nil {
 		return nil, err
@@ -27,9 +29,24 @@ func NewDatastoreWrapper(ctx context.Context, projectID string) (DBWrapper, erro
 	return &datastoreWrapper{client}, nil
 }
 
-func (d *datastoreWrapper) GetLessons(ctx context.Context, cursorStr string) ([]data.Entry, string, error) {
+// Filter can be passed to GetLessons to filter results.
+type Filter int8
+
+const (
+	// FilterNone will filter nothing.
+	FilterNone Filter = iota
+	// FilterOnlyConverted will return only converted lessons.
+	FilterOnlyConverted
+)
+
+func (d *datastoreWrapper) GetLessons(ctx context.Context, cursorStr string, filter Filter) ([]data.Entry, string, error) {
 	lessons := make([]data.Entry, 0)
 	query := datastore.NewQuery("Entry").Order("-Scraped").Limit(pageSize)
+	switch filter {
+	case FilterOnlyConverted:
+		query = query.Filter("Converted=", true)
+		break
+	}
 	if cursorStr != "" {
 		cursor, err := datastore.DecodeCursor(cursorStr)
 		if err != nil {

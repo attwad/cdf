@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -19,18 +18,20 @@ import (
 var (
 	hostPort  = flag.String("listen_addr", "127.0.0.1:8080", "Address to listen on.")
 	projectID = flag.String("project_id", "college-de-france", "Google cloud project.")
-	tmplPath  = flag.String("template_path", "", "Path to the templates directory")
-	tmpl      = template.Must(template.ParseGlob(*tmplPath + "*.html"))
 )
 
 type server struct {
 	ctx      context.Context
-	db       db.DBWrapper
+	db       db.Wrapper
 	searcher search.Searcher
 }
 
 func (s *server) APIServeLessons(w http.ResponseWriter, r *http.Request) {
-	lessons, cursor, err := s.db.GetLessons(s.ctx, r.URL.Query().Get("cursor"))
+	filter := db.FilterNone
+	if r.URL.Query().Get("filter") == "converted" {
+		filter = db.FilterOnlyConverted
+	}
+	lessons, cursor, err := s.db.GetLessons(s.ctx, r.URL.Query().Get("cursor"), filter)
 	if err != nil {
 		log.Println("Could not read lessons from db:", err)
 		http.Error(w, "Could not read lessons from DB", http.StatusInternalServerError)
