@@ -5,3 +5,8 @@ indexes:
     - name: Scheduled
     - name: DurationSec
     - name: Hash
+- kind: Entry
+  properties:
+    - name: Converted
+    - name: Scraped
+      direction: desc
