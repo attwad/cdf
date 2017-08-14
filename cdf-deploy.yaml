@@ -56,10 +56,6 @@ spec:
             add:
               - IPC_LOCK
         env:
-        - name: "CLUSTER_NAME"
-          value: "esdb"
-        #- name: "DISCOVERY_SERVICE"
-        #  value: "elasticsearch"
         - name: NODE_MASTER
           value: "true"
         - name: NODE_DATA
@@ -71,5 +67,5 @@ spec:
           name: http
           protocol: TCP
         volumeMounts:
-        - mountPath: /data
+        - mountPath: /var/data/elasticsearch
           name: es-persistent-storage

@@ -1,0 +1,5 @@
+path:
+  logs: /var/log/elasticsearch
+  data: /var/data/elasticsearch
+cluster.name: esdb
+node.name: ${HOSTNAME}
