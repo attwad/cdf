@@ -1,0 +1,75 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: worker
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      volumes:
+      - name: google-cloud-key
+        secret:
+          secretName: worker-key
+      containers:
+      - name: worker
+        image: eu.gcr.io/college-de-france/worker:latest
+        volumeMounts:
+        - name: google-cloud-key
+          mountPath: /var/secrets/google
+        env:
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /var/secrets/google/key.json
+        command: ["go-wrapper"]
+        args: ["run", "--project_id=college-de-france", "--bucket=healthy-cycle-9484", "--sox_path=sox"]
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: elasticsearch
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      initContainers:
+        - name: init-sysctl
+          image: busybox
+          imagePullPolicy: IfNotPresent
+          command: ["sysctl", "-w", "vm.max_map_count=262144"]
+          securityContext:
+            privileged: true
+      volumes:
+        - name: es-persistent-storage
+          gcePersistentDisk:
+            pdName: es-disk
+            fsType: ext4
+      containers:
+      - name: elasticsearch
+        image: docker.elastic.co/elasticsearch/elasticsearch:5.5.1
+        securityContext:
+          capabilities:
+            add:
+              - IPC_LOCK
+        env:
+        - name: "CLUSTER_NAME"
+          value: "esdb"
+        #- name: "DISCOVERY_SERVICE"
+        #  value: "elasticsearch"
+        - name: NODE_MASTER
+          value: "true"
+        - name: NODE_DATA
+          value: "true"
+        - name: HTTP_ENABLE
+          value: "true"
+        ports:
+        - containerPort: 9200
+          name: http
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /data
+          name: es-persistent-storage
