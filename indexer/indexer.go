@@ -69,11 +69,19 @@ func (i *elasticIndexer) Index(c data.Course, sentences []string) error {
 		return err
 	}
 	defer resp.Body.Close()
+	type index struct {
+		Status int    `json:"status"`
+		Error  string `json:"error"`
+	}
+	type item struct {
+		Index index `json:"index"`
+	}
 	type indexResp struct {
 		// Took x ms to index.
 		TookMs int `json:"took"`
 		// HasError or not.
-		HasError bool `json:"errors"`
+		HasError bool   `json:"errors"`
+		Items    []item `json:"items"`
 	}
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -83,10 +91,13 @@ func (i *elasticIndexer) Index(c data.Course, sentences []string) error {
 	if err := json.Unmarshal(respBody, &ir); err != nil {
 		return fmt.Errorf("unmarshall response body: %v", err)
 	}
-	log.Println("Indexing took", ir.TookMs, "ms and had errors:", ir.HasError)
+	log.Println("Indexing response", ir)
 	if ir.HasError {
 		log.Println("Indexing response had an error:", string(respBody))
 		return fmt.Errorf("indexing response had an error")
+	}
+	if len(ir.Items) == 0 {
+		return fmt.Errorf("nothing was indexed")
 	}
 	return nil
 }

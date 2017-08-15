@@ -43,16 +43,30 @@ func TestIndex(t *testing.T) {
 }
 
 func TestIndexFails(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if _, err := io.WriteString(w, `{"took":11,"errors":true,"items":[{"index":{"_index":"course","_type":"transcript","_id":"AV2O2EyhLu53oBP8SQm_","_version":1,"result":"created","_shards":{"total":2,"successful":1,"failed":0},"created":true,"status":201}},{"index":{"_index":"course","_type":"transcript","_id":"AV2O2EyhLu53oBP8SQnA","_version":1,"result":"created","_shards":{"total":2,"successful":1,"failed":0},"created":true,"status":201}}]}`); err != nil {
-			t.Fatalf("Could not send test response %v", err)
-		}
-	}))
-	defer ts.Close()
+	tests := []struct {
+		msg        string
+		jsonOutput string
+	}{
+		{
+			"top level error",
+			`{"took":11,"errors":true,"items":[{"index":{"_index":"course","_type":"transcript","_id":"AV2O2EyhLu53oBP8SQm_","_version":1,"result":"created","_shards":{"total":2,"successful":1,"failed":0},"created":true,"status":201}},{"index":{"_index":"course","_type":"transcript","_id":"AV2O2EyhLu53oBP8SQnA","_version":1,"result":"created","_shards":{"total":2,"successful":1,"failed":0},"created":true,"status":201}}]}`,
+		}, {
+			"nothing to index",
+			`{}`,
+		},
+	}
+	for _, test := range tests {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if _, err := io.WriteString(w, test.jsonOutput); err != nil {
+				t.Fatalf("[%s] Could not send test response %v", test.msg, err)
+			}
+		}))
+		defer ts.Close()
 
-	i := NewElasticIndexer(ts.URL)
-	err := i.Index(data.Course{Title: "a title"}, []string{"sentence 1"})
-	if err == nil {
-		t.Error("Wanted indexing error but got nil")
+		i := NewElasticIndexer(ts.URL)
+		err := i.Index(data.Course{Title: "a title"}, []string{"sentence 1"})
+		if err == nil {
+			t.Errorf("[%s] Wanted indexing error but got nil", test.msg)
+		}
 	}
 }
