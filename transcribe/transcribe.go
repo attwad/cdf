@@ -104,11 +104,13 @@ func (g *gSpeechTranscriber) wait(opName string) (*speechpb.LongRunningRecognize
 }
 
 func (g *gSpeechTranscriber) sendGCS(lang, gcsURI string, hints []string) (string, error) {
+	// Not requesting per work offset via "enableWordTimeOffsets": true in the config
+	// as I am not sure how useful it would be...
 	req := &speechpb.LongRunningRecognizeRequest{
 		Config: &speechpb.RecognitionConfig{
 			Encoding:        speechpb.RecognitionConfig_FLAC,
 			SampleRateHertz: 16000,
-			LanguageCode:    language.Make(lang).String(), // Must be something like "fr" or "en-US".
+			LanguageCode:    language.Make(lang).String(), // Must be a BCP-47 identifier.
 			SpeechContexts: []*speechpb.SpeechContext{
 				{Phrases: hints},
 			},
@@ -134,8 +136,9 @@ func (g *gSpeechTranscriber) ConvertToFLAC(soxPath, input string) ([]string, err
 	flacName := input + ".flac"
 	log.Println("Converting", input, "to flac @", flacName)
 	// Convert input to mono FLAC, split output in chunks of 59min as GCP Speech
-	// API supports max 1h chunks.
-	err := exec.CommandContext(ctx, soxPath, "-t", "mp3", input, flacName, "channels", "1", "rate", "16k", "trim", "0", "3540", ":", "newfile", ":", "restart").Run()
+	// API supports max 3h chunks.
+	// 10790 = 2.99 hours.
+	err := exec.CommandContext(ctx, soxPath, "-t", "mp3", input, flacName, "channels", "1", "rate", "16k", "trim", "0", "10790", ":", "newfile", ":", "restart").Run()
 	if err != nil {
 		return nil, err
 	}
