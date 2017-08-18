@@ -46,12 +46,13 @@ func (w *Worker) Run() error {
 	if err != nil {
 		return err
 	}
+	// TODO: Add elasticsearch health check.
 	for key, course := range courses {
 		// Download file from the web.
 		log.Println("Downloading", course.AudioLink, "to tmp file")
 		f, tmpCleanup, err := w.downloadToTmpFile(course.AudioLink)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		defer tmpCleanup()
 		// Convert to FLAC.
