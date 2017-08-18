@@ -55,13 +55,6 @@ spec:
           capabilities:
             add:
               - IPC_LOCK
-        env:
-        - name: NODE_MASTER
-          value: "true"
-        - name: NODE_DATA
-          value: "true"
-        - name: HTTP_ENABLE
-          value: "true"
         ports:
         - containerPort: 9200
           name: http
