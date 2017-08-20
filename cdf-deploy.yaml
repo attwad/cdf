@@ -15,7 +15,7 @@ spec:
           secretName: worker-key
       containers:
       - name: worker
-        image: eu.gcr.io/college-de-france/worker:latest
+        image: eu.gcr.io/college-de-france/worker:prod
         volumeMounts:
         - name: google-cloud-key
           mountPath: /var/secrets/google
@@ -50,7 +50,7 @@ spec:
             fsType: ext4
       containers:
       - name: elasticsearch
-        image: eu.gcr.io/college-de-france/es:latest
+        image: eu.gcr.io/college-de-france/es:prod
         securityContext:
           capabilities:
             add:
