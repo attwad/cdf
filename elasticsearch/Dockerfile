@@ -7,8 +7,8 @@ USER root
 RUN chown elasticsearch:elasticsearch config/elasticsearch.yml
 RUN mkdir -p /var/log/elasticsearch
 RUN mkdir -p /var/data/elasticsearch
-RUN chown elasticsearch:elasticsearch /var/log/elasticsearch
-RUN chown elasticsearch:elasticsearch /var/data/elasticsearch
+RUN chown -R elasticsearch:elasticsearch /var/log/elasticsearch
+RUN chown -R elasticsearch:elasticsearch /var/data/elasticsearch
 
 # Remove x-pack. You should not do this in prod and definitely not with an
 # instance of ES that's reachable online...

@@ -36,6 +36,9 @@ spec:
       labels:
         app: elasticsearch
     spec:
+      securityContext:
+        # Same group as elastic user at to be able to read/write the mounted volume.
+        fsGroup: 1000
       initContainers:
         - name: init-sysctl
           image: busybox
