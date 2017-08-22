@@ -25,7 +25,7 @@ spec:
         - name: GOOGLE_APPLICATION_CREDENTIALS
           value: /var/secrets/google/key.json
         command: ["go-wrapper"]
-        args: ["run", "--project_id=college-de-france", "--bucket=healthy-cycle-9484", "--sox_path=sox"]
+        args: ["run", "--project_id=college-de-france", "--bucket=healthy-cycle-9484", "--sox_path=sox", "--elastic_address=http://elastic:9200"]
 ---
 apiVersion: apps/v1beta1
 kind: Deployment
