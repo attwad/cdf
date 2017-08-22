@@ -17,7 +17,7 @@ var (
 	projectID      = flag.String("project_id", "", "Project ID")
 	bucket         = flag.String("bucket", "", "Cloud storage bucket")
 	soxPath        = flag.String("sox_path", "sox", "SOX binary path")
-	elasticAddress = flag.String("elastic_address", "", "HTTP address to elastic instance")
+	elasticAddress = flag.String("elastic_address", "http://elastic:9200", "HTTP address to elastic instance")
 )
 
 func main() {
