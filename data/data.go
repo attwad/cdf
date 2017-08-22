@@ -44,6 +44,8 @@ type Entry struct {
 	Scheduled bool
 	// When it was scheduled for conversion if applicable.
 	ScheduledTime time.Time
+	// Transcript is the full text of this lesson.
+	Transcript string `datastore:",noindex" json:"-"`
 }
 
 // ExternalCourse is what gets sent to clients, it contains formatted durations, dates etc.

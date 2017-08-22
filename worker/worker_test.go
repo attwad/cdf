@@ -17,6 +17,7 @@ type fakePicker struct {
 	scheduledCourses map[string]data.Course
 	convertedKey     string
 	scheduledLength  int
+	fullText         string
 }
 
 func (p *fakePicker) ScheduleRandom(int) (int, error) {
@@ -27,8 +28,9 @@ func (p *fakePicker) GetScheduled() (map[string]data.Course, error) {
 	return p.scheduledCourses, nil
 }
 
-func (p *fakePicker) MarkConverted(key string) error {
+func (p *fakePicker) MarkConverted(key, fullText string) error {
 	p.convertedKey = key
+	p.fullText = fullText
 	return nil
 }
 
@@ -184,6 +186,10 @@ func TestRun(t *testing.T) {
 	// Check that we marked the file as completed.
 	if got, want := fp.convertedKey, "k1"; got != want {
 		t.Errorf("Converted key, got=%q, want=%q", got, want)
+	}
+	// Check that we saved the transcript.
+	if got, want := fp.fullText, "line 1 line 2"; got != want {
+		t.Errorf("Saved transcript, got=%q, want=%q", got, want)
 	}
 	// Check that we saved the flac and text file with the transcript.
 	if got, want := len(fu.uploadedFiles), 2; got != want {

@@ -62,6 +62,7 @@ func (w *Worker) Run() error {
 			return err
 		}
 		log.Println("FLAC files:", paths)
+		fullText := ""
 		for _, flac := range paths {
 			flacReader, err := os.Open(flac)
 			if err != nil {
@@ -84,10 +85,11 @@ func (w *Worker) Run() error {
 			for _, b := range t {
 				text = append(text, b.Text)
 			}
+			flacText := strings.Join(text, " ")
+			fullText += flacText + " "
 			textName := filepath.Base(course.AudioLink) + ".txt"
-			log.Println("Saving text to", textName)
-			log.Println(text)
-			if err := w.uploader.UploadFile(strings.NewReader(strings.Join(text, " ")), filepath.Base(textName)); err != nil {
+			log.Println("Saving text to: ", textName)
+			if err := w.uploader.UploadFile(strings.NewReader(flacText), filepath.Base(textName)); err != nil {
 				return err
 			}
 			// Remove FLAC file from cloud storage.
@@ -104,7 +106,7 @@ func (w *Worker) Run() error {
 		}
 		// Mark the file as converted.
 		log.Println("Marking", course.AudioLink, "as converted")
-		if err := w.picker.MarkConverted(key); err != nil {
+		if err := w.picker.MarkConverted(key, strings.TrimSpace(fullText)); err != nil {
 			return err
 		}
 	}

@@ -16,7 +16,7 @@ import (
 type Picker interface {
 	GetScheduled() (map[string]data.Course, error)
 	ScheduleRandom(maxDurationSec int) (int, error)
-	MarkConverted(key string) error
+	MarkConverted(key, fullText string) error
 }
 
 type datastorePicker struct {
@@ -37,7 +37,7 @@ func NewDatastorePicker(projectID string) (Picker, error) {
 	}, nil
 }
 
-func (p *datastorePicker) MarkConverted(key string) error {
+func (p *datastorePicker) MarkConverted(key, fullText string) error {
 	tx, err := p.client.NewTransaction(p.ctx)
 	if err != nil {
 		return fmt.Errorf("NewTransaction: %v", err)
@@ -52,6 +52,7 @@ func (p *datastorePicker) MarkConverted(key string) error {
 	}
 	e.Converted = true
 	e.Scheduled = false
+	e.Transcript = fullText
 	if _, err := tx.Put(k, &e); err != nil {
 		return fmt.Errorf("tx.Put: %v", err)
 	}
