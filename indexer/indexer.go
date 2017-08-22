@@ -91,7 +91,7 @@ func (i *elasticIndexer) Index(c data.Course, sentences []string) error {
 	if err := json.Unmarshal(respBody, &ir); err != nil {
 		return fmt.Errorf("unmarshall response body: %v", err)
 	}
-	log.Println("Indexing response", ir)
+	log.Printf("Indexing response: %+v", ir)
 	if ir.HasError {
 		log.Println("Indexing response had an error:", string(respBody))
 		return fmt.Errorf("indexing response had an error")
