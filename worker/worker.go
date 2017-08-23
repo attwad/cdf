@@ -41,9 +41,9 @@ func NewGCPWorker(u upload.FileUploader, t transcribe.Transcriber, m money.Broke
 }
 
 // Run checks for scheduled tasks and handle all of them if any.
-func (w *Worker) Run() error {
+func (w *Worker) Run(ctx context.Context) error {
 	// Handle the scheduled tasks.
-	courses, err := w.picker.GetScheduled()
+	courses, err := w.picker.GetScheduled(ctx)
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func (w *Worker) Run() error {
 		}
 		// Mark the file as converted.
 		log.Println("Marking", course.AudioLink, "as converted")
-		if err := w.picker.MarkConverted(key, strings.TrimSpace(fullText)); err != nil {
+		if err := w.picker.MarkConverted(ctx, key, strings.TrimSpace(fullText)); err != nil {
 			return err
 		}
 	}
@@ -149,7 +149,7 @@ func (w *Worker) MaybeSchedule(ctx context.Context) (bool, error) {
 	if balance <= 0 {
 		return false, nil
 	}
-	length, err := w.picker.ScheduleRandom(balance)
+	length, err := w.picker.ScheduleRandom(ctx, balance)
 	if err != nil {
 		return false, err
 	}

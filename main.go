@@ -26,7 +26,7 @@ func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 	ctx := context.Background()
 
-	p, err := pick.NewDatastorePicker(*projectID)
+	p, err := pick.NewDatastorePicker(ctx, *projectID)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func main() {
 		*soxPath)
 	log.Println("Analyzer created, entering loop...")
 	for {
-		if err := a.Run(); err != nil {
+		if err := a.Run(ctx); err != nil {
 			log.Fatalf("running: %v", err)
 		}
 		hasNew, err := a.MaybeSchedule(ctx)

@@ -14,31 +14,28 @@ import (
 
 // Picker allows access to items and scheduling.
 type Picker interface {
-	GetScheduled() (map[string]data.Course, error)
-	ScheduleRandom(maxDurationSec int) (int, error)
-	MarkConverted(key, fullText string) error
+	GetScheduled(ctx context.Context) (map[string]data.Course, error)
+	ScheduleRandom(ctx context.Context, maxDurationSec int) (int, error)
+	MarkConverted(ctx context.Context, key, fullText string) error
 }
 
 type datastorePicker struct {
 	client *datastore.Client
-	ctx    context.Context
 }
 
 // NewDatastorePicker creates a new Picker connected to Google cloud datastore.
-func NewDatastorePicker(projectID string) (Picker, error) {
-	ctx := context.Background()
+func NewDatastorePicker(ctx context.Context, projectID string) (Picker, error) {
 	client, err := datastore.NewClient(ctx, projectID)
 	if err != nil {
 		return nil, err
 	}
 	return &datastorePicker{
 		client: client,
-		ctx:    ctx,
 	}, nil
 }
 
-func (p *datastorePicker) MarkConverted(key, fullText string) error {
-	tx, err := p.client.NewTransaction(p.ctx)
+func (p *datastorePicker) MarkConverted(ctx context.Context, key, fullText string) error {
+	tx, err := p.client.NewTransaction(ctx)
 	if err != nil {
 		return fmt.Errorf("NewTransaction: %v", err)
 	}
@@ -62,7 +59,7 @@ func (p *datastorePicker) MarkConverted(key, fullText string) error {
 	return nil
 }
 
-func (p *datastorePicker) ScheduleRandom(maxDurationSec int) (int, error) {
+func (p *datastorePicker) ScheduleRandom(ctx context.Context, maxDurationSec int) (int, error) {
 	// Pick a random (hash-ordered) entry that is not scheduled and not converted yet.
 	query := datastore.NewQuery("Entry").
 		Filter("Converted =", false).
@@ -72,7 +69,7 @@ func (p *datastorePicker) ScheduleRandom(maxDurationSec int) (int, error) {
 		Order("Hash").
 		Limit(1)
 	var e data.Entry
-	it := p.client.Run(p.ctx, query)
+	it := p.client.Run(ctx, query)
 	for {
 		key, err := it.Next(&e)
 		for err == iterator.Done {
@@ -83,7 +80,7 @@ func (p *datastorePicker) ScheduleRandom(maxDurationSec int) (int, error) {
 		}
 		e.Scheduled = true
 		e.ScheduledTime = time.Now()
-		if _, err := p.client.Put(p.ctx, key, &e); err != nil {
+		if _, err := p.client.Put(ctx, key, &e); err != nil {
 			return 0, fmt.Errorf("client.Put: %v", err)
 		}
 		break
@@ -92,12 +89,12 @@ func (p *datastorePicker) ScheduleRandom(maxDurationSec int) (int, error) {
 	return e.DurationSec, nil
 }
 
-func (p *datastorePicker) GetScheduled() (map[string]data.Course, error) {
+func (p *datastorePicker) GetScheduled(ctx context.Context) (map[string]data.Course, error) {
 	// Pick a random (has-ordered) entry that is not scheduled and not converted yet.
 	query := datastore.NewQuery("Entry").
 		Filter("Scheduled =", true)
 	var e data.Entry
-	it := p.client.Run(p.ctx, query)
+	it := p.client.Run(ctx, query)
 	courses := make(map[string]data.Course, 0)
 	for {
 		k, err := it.Next(&e)

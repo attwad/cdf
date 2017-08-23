@@ -21,15 +21,15 @@ type fakePicker struct {
 	fullText         string
 }
 
-func (p *fakePicker) ScheduleRandom(int) (int, error) {
+func (p *fakePicker) ScheduleRandom(context.Context, int) (int, error) {
 	return p.scheduledLength, nil
 }
 
-func (p *fakePicker) GetScheduled() (map[string]data.Course, error) {
+func (p *fakePicker) GetScheduled(context.Context) (map[string]data.Course, error) {
 	return p.scheduledCourses, nil
 }
 
-func (p *fakePicker) MarkConverted(key, fullText string) error {
+func (p *fakePicker) MarkConverted(_ context.Context, key, fullText string) error {
 	p.convertedKey = key
 	p.fullText = fullText
 	return nil
@@ -182,7 +182,8 @@ func TestRun(t *testing.T) {
 			Timeout: time.Second * 5,
 		},
 	}
-	if err := w.Run(); err != nil {
+	ctx := context.Background()
+	if err := w.Run(ctx); err != nil {
 		t.Errorf("Run: %v", err)
 	}
 	// Check that we marked the file as completed.
