@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -51,11 +52,11 @@ type fakeBroker struct {
 	getBalanceError error
 }
 
-func (b *fakeBroker) GetBalance() (int, error) {
+func (b *fakeBroker) GetBalance(ctx context.Context) (int, error) {
 	return b.balance, b.getBalanceError
 }
 
-func (b *fakeBroker) ChangeBalance(delta int) error {
+func (b *fakeBroker) ChangeBalance(ctx context.Context, delta int) error {
 	b.balance -= delta
 	return nil
 }
@@ -132,8 +133,9 @@ func TestMaybeSchedule(t *testing.T) {
 			wantError:     true,
 		},
 	}
+	ctx := context.Background()
 	for _, test := range tests {
-		taskScheduled, err := test.w.MaybeSchedule()
+		taskScheduled, err := test.w.MaybeSchedule(ctx)
 		if got, want := taskScheduled, test.taskScheduled; got != want {
 			t.Errorf("[%s] task scheduled, got=%t, want=%t", test.msg, got, want)
 		}

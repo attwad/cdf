@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"io"
 	"io/ioutil"
 	"log"
@@ -138,9 +139,9 @@ func (w *Worker) downloadToTmpFile(url string) (*os.File, func(), error) {
 // Simple greedy algorithm, should use dynamic programming if I want to
 // optimize for the number of courses converted vs pure length.
 // Returns whether new tasks were scheduled.
-func (w *Worker) MaybeSchedule() (bool, error) {
+func (w *Worker) MaybeSchedule(ctx context.Context) (bool, error) {
 	// Get our current balance.
-	balance, err := w.broker.GetBalance()
+	balance, err := w.broker.GetBalance(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -156,7 +157,7 @@ func (w *Worker) MaybeSchedule() (bool, error) {
 		return false, nil
 	}
 	log.Println("New task scheduled")
-	if err := w.broker.ChangeBalance(-length); err != nil {
+	if err := w.broker.ChangeBalance(ctx, -length); err != nil {
 		return false, err
 	}
 	log.Println("Decreased balance")

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"time"
@@ -23,6 +24,7 @@ var (
 func main() {
 	flag.Parse()
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+	ctx := context.Background()
 
 	p, err := pick.NewDatastorePicker(*projectID)
 	if err != nil {
@@ -36,7 +38,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	b, err := money.NewDatastoreBroker(*projectID)
+	b, err := money.NewDatastoreBroker(ctx, *projectID)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -53,7 +55,7 @@ func main() {
 		if err := a.Run(); err != nil {
 			log.Fatalf("running: %v", err)
 		}
-		hasNew, err := a.MaybeSchedule()
+		hasNew, err := a.MaybeSchedule(ctx)
 		if err != nil {
 			log.Fatalf("Scheduling new tasks: %v", err)
 		}

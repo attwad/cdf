@@ -14,35 +14,34 @@ type account struct {
 	BalanceInEurCents int
 }
 
+// Broker handles the account balance.
 type Broker interface {
-	ChangeBalance(deltaCents int) error
-	GetBalance() (int, error)
+	ChangeBalance(ctx context.Context, deltaCents int) error
+	GetBalance(ctx context.Context) (int, error)
 }
 
 type datastoreBroker struct {
 	client *datastore.Client
-	ctx    context.Context
 	key    *datastore.Key
 }
 
-func NewDatastoreBroker(projectID string) (Broker, error) {
-	ctx := context.Background()
+// NewDatastoreBroker creates a new broker connected to datastore.
+func NewDatastoreBroker(ctx context.Context, projectID string) (Broker, error) {
 	client, err := datastore.NewClient(ctx, projectID)
 	if err != nil {
 		return nil, err
 	}
 	b := &datastoreBroker{
 		client: client,
-		ctx:    ctx,
 	}
-	if err := b.init(); err != nil {
+	if err := b.init(ctx); err != nil {
 		return nil, err
 	}
 	return b, nil
 }
 
-func (b *datastoreBroker) ChangeBalance(deltaCents int) error {
-	tx, err := b.client.NewTransaction(b.ctx)
+func (b *datastoreBroker) ChangeBalance(ctx context.Context, deltaCents int) error {
+	tx, err := b.client.NewTransaction(ctx)
 	if err != nil {
 		return fmt.Errorf("NewTransaction: %v", err)
 	}
@@ -60,21 +59,21 @@ func (b *datastoreBroker) ChangeBalance(deltaCents int) error {
 	return nil
 }
 
-func (b *datastoreBroker) GetBalance() (int, error) {
+func (b *datastoreBroker) GetBalance(ctx context.Context) (int, error) {
 	var act account
-	if err := b.client.Get(b.ctx, b.key, &act); err != nil {
+	if err := b.client.Get(ctx, b.key, &act); err != nil {
 		return 0, fmt.Errorf("client.Get: %v", err)
 	}
 	return act.BalanceInEurCents, nil
 }
 
-func (b *datastoreBroker) init() error {
+func (b *datastoreBroker) init(ctx context.Context) error {
 	var act account
-	if err := b.client.Get(b.ctx, accountKey, &act); err != nil {
+	if err := b.client.Get(ctx, accountKey, &act); err != nil {
 		if err == datastore.ErrNoSuchEntity {
 			log.Println("could not get initial account entity, creating one")
 			// Create a default zero value.
-			key, err := b.client.Put(b.ctx, accountKey, &act)
+			key, err := b.client.Put(ctx, accountKey, &act)
 			if err != nil {
 				return fmt.Errorf("creating default account: %v", err)
 			}
