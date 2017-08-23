@@ -34,7 +34,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	t, err := transcribe.NewGSpeechTranscriber()
+	t, err := transcribe.NewGSpeechTranscriber(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}

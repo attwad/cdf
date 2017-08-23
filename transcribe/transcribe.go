@@ -1,6 +1,7 @@
 package transcribe
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"golang.org/x/net/context"
 	"golang.org/x/text/language"
 
 	speech "cloud.google.com/go/speech/apiv1"
@@ -26,35 +26,32 @@ type Transcription struct {
 
 // Transcriber allows transcription of an audio file.
 type Transcriber interface {
-	Transcribe(lang, path string, hints []string) ([]Transcription, error)
-	ConvertToFLAC(soxPath, input string) ([]string, error)
+	Transcribe(ctx context.Context, lang, path string, hints []string) ([]Transcription, error)
+	ConvertToFLAC(ctx context.Context, soxPath, input string) ([]string, error)
 }
 
 type gSpeechTranscriber struct {
 	client *speech.Client
-	ctx    context.Context
 }
 
 // NewGSpeechTranscriber creates a new transcriber using the Google Speech API.
-func NewGSpeechTranscriber() (Transcriber, error) {
-	ctx := context.Background()
+func NewGSpeechTranscriber(ctx context.Context) (Transcriber, error) {
 	client, err := speech.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return &gSpeechTranscriber{
 		client: client,
-		ctx:    ctx,
 	}, nil
 }
 
-func (g *gSpeechTranscriber) Transcribe(lang, gcsURI string, hints []string) ([]Transcription, error) {
-	opName, err := g.sendGCS(lang, gcsURI, hints)
+func (g *gSpeechTranscriber) Transcribe(ctx context.Context, lang, gcsURI string, hints []string) ([]Transcription, error) {
+	opName, err := g.sendGCS(ctx, lang, gcsURI, hints)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := g.wait(opName)
+	resp, err := g.wait(ctx, opName)
 	if err != nil {
 		return nil, err
 	}
@@ -71,12 +68,12 @@ func (g *gSpeechTranscriber) Transcribe(lang, gcsURI string, hints []string) ([]
 	return transcriptions, nil
 }
 
-func (g *gSpeechTranscriber) wait(opName string) (*speechpb.LongRunningRecognizeResponse, error) {
+func (g *gSpeechTranscriber) wait(ctx context.Context, opName string) (*speechpb.LongRunningRecognizeResponse, error) {
 	opClient := longrunningpb.NewOperationsClient(g.client.Connection())
 	var op *longrunningpb.Operation
 	var err error
 	for {
-		op, err = opClient.GetOperation(g.ctx, &longrunningpb.GetOperationRequest{
+		op, err = opClient.GetOperation(ctx, &longrunningpb.GetOperationRequest{
 			Name: opName,
 		})
 		if err != nil {
@@ -103,7 +100,7 @@ func (g *gSpeechTranscriber) wait(opName string) (*speechpb.LongRunningRecognize
 	return nil, errors.New("no response")
 }
 
-func (g *gSpeechTranscriber) sendGCS(lang, gcsURI string, hints []string) (string, error) {
+func (g *gSpeechTranscriber) sendGCS(ctx context.Context, lang, gcsURI string, hints []string) (string, error) {
 	// Not requesting per work offset via "enableWordTimeOffsets": true in the config
 	// as I am not sure how useful it would be...
 	req := &speechpb.LongRunningRecognizeRequest{
@@ -121,7 +118,7 @@ func (g *gSpeechTranscriber) sendGCS(lang, gcsURI string, hints []string) (strin
 	}
 	log.Println("Sending gspeech request", req)
 
-	op, err := g.client.LongRunningRecognize(g.ctx, req)
+	op, err := g.client.LongRunningRecognize(ctx, req)
 	if err != nil {
 		return "", err
 	}
@@ -130,8 +127,8 @@ func (g *gSpeechTranscriber) sendGCS(lang, gcsURI string, hints []string) (strin
 
 // ConvertToFLAC converts the input audio file into a FLAC audio file as the output filename using the program sox.
 // Returns the output paths.
-func (g *gSpeechTranscriber) ConvertToFLAC(soxPath, input string) ([]string, error) {
-	ctx, cancel := context.WithTimeout(g.ctx, 120*time.Second)
+func (g *gSpeechTranscriber) ConvertToFLAC(ctx context.Context, soxPath, input string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
 	flacName := input + ".flac"
 	log.Println("Converting", input, "to flac @", flacName)

@@ -58,7 +58,7 @@ func (w *Worker) Run(ctx context.Context) error {
 		defer tmpCleanup()
 		// Convert to FLAC.
 		log.Println("Converting to flac")
-		paths, err := w.transcriber.ConvertToFLAC(w.soxPath, f.Name())
+		paths, err := w.transcriber.ConvertToFLAC(ctx, w.soxPath, f.Name())
 		if err != nil {
 			return err
 		}
@@ -77,7 +77,7 @@ func (w *Worker) Run(ctx context.Context) error {
 			}
 			// Send it to speech recognition.
 			log.Println("Transcribing audio")
-			t, err := w.transcriber.Transcribe(course.Language, w.uploader.Path(filepath.Base(flac)), course.Hints())
+			t, err := w.transcriber.Transcribe(ctx, course.Language, w.uploader.Path(filepath.Base(flac)), course.Hints())
 			if err != nil {
 				return err
 			}

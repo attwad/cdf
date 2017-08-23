@@ -39,11 +39,11 @@ type fakeTranscriber struct {
 	transcription []transcribe.Transcription
 }
 
-func (t *fakeTranscriber) Transcribe(lang, path string, hints []string) ([]transcribe.Transcription, error) {
+func (t *fakeTranscriber) Transcribe(ctx context.Context, lang, path string, hints []string) ([]transcribe.Transcription, error) {
 	return t.transcription, nil
 }
 
-func (t *fakeTranscriber) ConvertToFLAC(soxPath, input string) ([]string, error) {
+func (t *fakeTranscriber) ConvertToFLAC(ctx context.Context, soxPath, input string) ([]string, error) {
 	return []string{input}, nil
 }
 
