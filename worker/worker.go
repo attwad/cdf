@@ -72,7 +72,7 @@ func (w *Worker) Run(ctx context.Context) error {
 			defer flacReader.Close()
 			// Save FLAC to cloud storage.
 			log.Println("Saving flac to could storage")
-			if err := w.uploader.UploadFile(flacReader, filepath.Base(flac)); err != nil {
+			if err := w.uploader.UploadFile(ctx, flacReader, filepath.Base(flac)); err != nil {
 				return err
 			}
 			// Send it to speech recognition.
@@ -90,13 +90,13 @@ func (w *Worker) Run(ctx context.Context) error {
 			fullText += flacText + " "
 			textName := filepath.Base(course.AudioLink) + ".txt"
 			log.Println("Saving text to: ", textName)
-			if err := w.uploader.UploadFile(strings.NewReader(flacText), filepath.Base(textName)); err != nil {
+			if err := w.uploader.UploadFile(ctx, strings.NewReader(flacText), filepath.Base(textName)); err != nil {
 				return err
 			}
 			// Remove FLAC file from cloud storage.
 			// TODO: defer and panic on error?
 			log.Println("Deleting flac from cloud storage")
-			if err := w.uploader.Delete(filepath.Base(flac)); err != nil {
+			if err := w.uploader.Delete(ctx, filepath.Base(flac)); err != nil {
 				return err
 			}
 			// Index sentences.

@@ -30,7 +30,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	u, err := upload.NewGCSFileUploader(*bucket)
+	u, err := upload.NewGCSFileUploader(ctx, *bucket)
 	if err != nil {
 		log.Fatal(err)
 	}

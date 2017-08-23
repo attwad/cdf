@@ -66,7 +66,7 @@ type fakeUploader struct {
 	deletedFiles  []string
 }
 
-func (f *fakeUploader) UploadFile(r io.Reader, name string) error {
+func (f *fakeUploader) UploadFile(ctx context.Context, r io.Reader, name string) error {
 	f.uploadedFiles = append(f.uploadedFiles, name)
 	return nil
 }
@@ -75,7 +75,7 @@ func (f *fakeUploader) Path(base string) string {
 	return base
 }
 
-func (f *fakeUploader) Delete(name string) error {
+func (f *fakeUploader) Delete(ctx context.Context, name string) error {
 	f.deletedFiles = append(f.deletedFiles, name)
 	return nil
 }
