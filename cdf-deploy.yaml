@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: worker
 spec:
+  strategy:
+    type: Recreate
   replicas: 1
   template:
     metadata:
@@ -16,6 +18,9 @@ spec:
       containers:
       - name: worker
         image: eu.gcr.io/college-de-france/worker
+        resources:
+          requests:
+            cpu: "50m"
         volumeMounts:
         - name: google-cloud-key
           mountPath: /var/secrets/google
@@ -32,6 +37,8 @@ kind: Deployment
 metadata:
   name: elasticsearch
 spec:
+  strategy:
+    type: Recreate
   replicas: 1
   template:
     metadata:
@@ -62,6 +69,9 @@ spec:
           capabilities:
             add:
               - IPC_LOCK
+        resources:
+          requests:
+            memory: "2.5Gi"
         ports:
         - containerPort: 9200
           name: http
