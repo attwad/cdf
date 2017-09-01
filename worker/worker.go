@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/attwad/cdf/health"
 	"github.com/attwad/cdf/indexer"
 	"github.com/attwad/cdf/money"
 	"github.com/attwad/cdf/pick"
@@ -27,27 +28,32 @@ type Worker struct {
 	indexer     indexer.Indexer
 	soxPath     string
 	httpClient  *http.Client
+	health      health.Checker
 }
 
 // NewGCPWorker creates a new worker that does its work using Google Cloud Platform.
-func NewGCPWorker(u upload.FileUploader, t transcribe.Transcriber, m money.Broker, p pick.Picker, i indexer.Indexer, soxPath string) *Worker {
+func NewGCPWorker(u upload.FileUploader, t transcribe.Transcriber, m money.Broker, p pick.Picker, i indexer.Indexer, soxPath string, h health.Checker) *Worker {
 	return &Worker{
 		u, t, m, p, i, soxPath,
 		// Any download of file shouldn't take more than a few minutes really...
 		&http.Client{
 			Timeout: time.Minute * 30,
 		},
+		h,
 	}
 }
 
 // Run checks for scheduled tasks and handle all of them if any.
 func (w *Worker) Run(ctx context.Context) error {
+	if !w.health.IsHealthy() {
+		log.Println("ElasticSearch is not healthy, not running...")
+		return nil
+	}
 	// Handle the scheduled tasks.
 	courses, err := w.picker.GetScheduled(ctx)
 	if err != nil {
 		return err
 	}
-	// TODO: Add elasticsearch health check.
 	for key, course := range courses {
 		// Download file from the web.
 		log.Println("Downloading", course.AudioLink, "to tmp file")

@@ -14,6 +14,15 @@ import (
 	"github.com/attwad/cdf/transcribe"
 )
 
+type fakeHealthChecker struct {
+	healthy bool
+	http.Handler
+}
+
+func (fhc *fakeHealthChecker) IsHealthy() bool {
+	return fhc.healthy
+}
+
 type fakePicker struct {
 	scheduledCourses map[string]data.Course
 	convertedKey     string
@@ -181,6 +190,7 @@ func TestRun(t *testing.T) {
 		httpClient: &http.Client{
 			Timeout: time.Second * 5,
 		},
+		health: &fakeHealthChecker{healthy: true},
 	}
 	ctx := context.Background()
 	if err := w.Run(ctx); err != nil {

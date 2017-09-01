@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/attwad/cdf/health"
 	"github.com/attwad/cdf/indexer"
 	"github.com/attwad/cdf/money"
 	"github.com/attwad/cdf/pick"
@@ -49,7 +50,8 @@ func main() {
 		b,
 		p,
 		indexer.NewElasticIndexer(*elasticAddress),
-		*soxPath)
+		*soxPath,
+		health.NewElasticHealthChecker(*elasticAddress))
 	log.Println("Analyzer created, entering loop...")
 	for {
 		if err := a.Run(ctx); err != nil {
