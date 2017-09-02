@@ -132,8 +132,8 @@ func (g *gSpeechTranscriber) ConvertToFLAC(ctx context.Context, soxPath, input s
 	defer cancel()
 	flacName := input + ".flac"
 	log.Println("Converting", input, "to flac @", flacName)
-	// Convert input to mono FLAC, split output in chunks of 59min as GCP Speech
-	// API supports max 3h chunks.
+	// Convert input to mono FLAC, split output in chunks of 3H as GCP Speech
+	// API supports max 3H chunks.
 	// 10790 = 2.99 hours.
 	err := exec.CommandContext(ctx, soxPath, "-t", "mp3", input, flacName, "channels", "1", "rate", "16k", "trim", "0", "10790", ":", "newfile", ":", "restart").Run()
 	if err != nil {
