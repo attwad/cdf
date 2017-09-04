@@ -4,14 +4,35 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"cloud.google.com/go/datastore"
 )
+
+// $0.006 / 15 seconds
+const usdCentsPerSec = 0.006 / 15 * 100
+
+// 1 EUR = 1.19 USD
+const eurCentsPerUSDCents = 119
+
+// Euros cents it takes to convert 1 second of speech.
+// As of Sept. 4th 2017 it takes ~1.24 EURs to convert 1H of speech.
+const eurCentsPerSec = usdCentsPerSec * 100 / eurCentsPerUSDCents
 
 var accountKey = datastore.NameKey("Account", "acc", nil)
 
 type account struct {
 	BalanceInEurCents int
+}
+
+// EurCentsToDuration returns the duration convertible with the given amount of euro cents.
+func EurCentsToDuration(amount int) time.Duration {
+	return time.Duration(float64(amount)/eurCentsPerSec) * time.Second
+}
+
+// DurationToEurCents converts the given duration to the cost it represents.
+func DurationToEurCents(duration time.Duration) int {
+	return int(duration.Seconds() * eurCentsPerSec)
 }
 
 // Broker handles the account balance.

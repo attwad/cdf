@@ -30,8 +30,8 @@ type fakePicker struct {
 	fullText         string
 }
 
-func (p *fakePicker) ScheduleRandom(context.Context, int) (int, error) {
-	return p.scheduledLength, nil
+func (p *fakePicker) ScheduleRandom(context.Context, time.Duration) (time.Duration, error) {
+	return time.Duration(p.scheduledLength) * time.Second, nil
 }
 
 func (p *fakePicker) GetScheduled(context.Context) (map[string]data.Course, error) {

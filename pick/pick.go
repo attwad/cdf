@@ -15,7 +15,7 @@ import (
 // Picker allows access to items and scheduling.
 type Picker interface {
 	GetScheduled(ctx context.Context) (map[string]data.Course, error)
-	ScheduleRandom(ctx context.Context, maxDurationSec int) (int, error)
+	ScheduleRandom(ctx context.Context, maxDuration time.Duration) (time.Duration, error)
 	MarkConverted(ctx context.Context, key, fullText string) error
 }
 
@@ -59,12 +59,12 @@ func (p *datastorePicker) MarkConverted(ctx context.Context, key, fullText strin
 	return nil
 }
 
-func (p *datastorePicker) ScheduleRandom(ctx context.Context, maxDurationSec int) (int, error) {
+func (p *datastorePicker) ScheduleRandom(ctx context.Context, maxDuration time.Duration) (time.Duration, error) {
 	// Pick a random (hash-ordered) entry that is not scheduled and not converted yet.
 	query := datastore.NewQuery("Entry").
 		Filter("Converted =", false).
 		Filter("Scheduled =", false).
-		Filter("DurationSec <", maxDurationSec).
+		Filter("DurationSec <", maxDuration.Seconds()).
 		Order("DurationSec").
 		Order("Hash").
 		Limit(1)
@@ -86,7 +86,7 @@ func (p *datastorePicker) ScheduleRandom(ctx context.Context, maxDurationSec int
 		break
 	}
 
-	return e.DurationSec, nil
+	return time.Duration(e.DurationSec) * time.Second, nil
 }
 
 func (p *datastorePicker) GetScheduled(ctx context.Context) (map[string]data.Course, error) {

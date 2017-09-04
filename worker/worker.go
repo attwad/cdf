@@ -155,7 +155,8 @@ func (w *Worker) MaybeSchedule(ctx context.Context) (bool, error) {
 	if balance <= 0 {
 		return false, nil
 	}
-	length, err := w.picker.ScheduleRandom(ctx, balance)
+	equivDuration := money.EurCentsToDuration(balance)
+	length, err := w.picker.ScheduleRandom(ctx, equivDuration)
 	if err != nil {
 		return false, err
 	}
@@ -163,7 +164,8 @@ func (w *Worker) MaybeSchedule(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 	log.Println("New task scheduled")
-	if err := w.broker.ChangeBalance(ctx, -length); err != nil {
+	equivBalance := money.DurationToEurCents(length)
+	if err := w.broker.ChangeBalance(ctx, -equivBalance); err != nil {
 		return false, err
 	}
 	log.Println("Decreased balance")
