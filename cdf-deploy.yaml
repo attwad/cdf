@@ -24,7 +24,7 @@ spec:
           secretName: worker-key
       containers:
       - name: worker
-        image: eu.gcr.io/college-de-france/worker
+        image: eu.gcr.io/college-de-france/worker:prod-v1.1.0
         resources:
           requests:
             cpu: "50m"
