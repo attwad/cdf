@@ -166,7 +166,7 @@ func (w *Worker) MaybeSchedule(ctx context.Context) (bool, error) {
 		log.Println("Nothing to schedule, bailing")
 		return false, nil
 	}
-	log.Println("New task scheduled")
+	log.Println("New task scheduled:", length)
 	equivBalance := money.DurationToEurCents(length)
 	if err := w.broker.ChangeBalance(ctx, -equivBalance); err != nil {
 		return false, err
