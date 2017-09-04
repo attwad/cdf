@@ -108,7 +108,7 @@ func TestMaybeSchedule(t *testing.T) {
 		{
 			msg: "balance ok",
 			w: Worker{
-				broker: &fakeBroker{balance: 50},
+				broker: &fakeBroker{balance: 500},
 				picker: &fakePicker{scheduledLength: 10},
 			},
 			taskScheduled: true,
@@ -116,7 +116,7 @@ func TestMaybeSchedule(t *testing.T) {
 		}, {
 			msg: "not enough balance",
 			w: Worker{
-				broker: &fakeBroker{balance: 0},
+				broker: &fakeBroker{balance: 10},
 				picker: &fakePicker{},
 			},
 			taskScheduled: false,
@@ -133,7 +133,7 @@ func TestMaybeSchedule(t *testing.T) {
 			msg: "error checking balance",
 			w: Worker{
 				broker: &fakeBroker{
-					balance:         50,
+					balance:         500,
 					getBalanceError: fmt.Errorf("not connected"),
 				},
 				picker: &fakePicker{},

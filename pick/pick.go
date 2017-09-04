@@ -3,6 +3,7 @@ package pick
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/attwad/cdf/data"
@@ -73,6 +74,7 @@ func (p *datastorePicker) ScheduleRandom(ctx context.Context, maxDuration time.D
 	for {
 		key, err := it.Next(&e)
 		for err == iterator.Done {
+			log.Println("Nothing to schedule that is <", maxDuration.Seconds())
 			return 0, nil
 		}
 		if err != nil {

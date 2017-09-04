@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -156,11 +157,13 @@ func (w *Worker) MaybeSchedule(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 	equivDuration := money.EurCentsToDuration(balance)
+	log.Println("Current balance can schedule up to", equivDuration)
 	length, err := w.picker.ScheduleRandom(ctx, equivDuration)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("sheduling random lesson: %v", err)
 	}
 	if length <= 0 {
+		log.Println("Nothing to schedule, bailing")
 		return false, nil
 	}
 	log.Println("New task scheduled")
