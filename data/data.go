@@ -57,8 +57,18 @@ type ExternalCourse struct {
 
 // Hints returns a list of sentences or words to help speech recognition.
 func (c *Course) Hints() []string {
-	s := []string{c.Title, c.Lecturer, c.Chaire}
-	if c.TypeTitle != "" {
+	// Context phrases must not be longer than 100 characters.
+	s := make([]string, 0)
+	if len(c.Title) < 100 {
+		s = append(s, c.Title)
+	}
+	if len(c.Lecturer) < 100 {
+		s = append(s, c.Lecturer)
+	}
+	if len(c.Chaire) < 100 {
+		s = append(s, c.Chaire)
+	}
+	if c.TypeTitle != "" && len(c.TypeTitle) < 100 {
 		s = append(s, c.TypeTitle)
 	}
 	return s
