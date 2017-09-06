@@ -2,6 +2,10 @@ package data
 
 import "time"
 
+// maxHintChars is the maximum number of characters allowed as a single hint
+// sentence by gspeech api.
+const maxHintChars = 100
+
 // Course represents a lesson, colloque, symposium, etc.
 // It represents a superset of what gets indexed by the search engine (anything that has a json field mapped).
 type Course struct {
@@ -59,16 +63,16 @@ type ExternalCourse struct {
 func (c *Course) Hints() []string {
 	// Context phrases must not be longer than 100 characters.
 	s := make([]string, 0)
-	if len(c.Title) < 100 {
+	if len(c.Title) < maxHintChars {
 		s = append(s, c.Title)
 	}
-	if len(c.Lecturer) < 100 {
+	if len(c.Lecturer) < maxHintChars {
 		s = append(s, c.Lecturer)
 	}
-	if len(c.Chaire) < 100 {
+	if len(c.Chaire) < maxHintChars {
 		s = append(s, c.Chaire)
 	}
-	if c.TypeTitle != "" && len(c.TypeTitle) < 100 {
+	if c.TypeTitle != "" && len(c.TypeTitle) < maxHintChars {
 		s = append(s, c.TypeTitle)
 	}
 	return s
