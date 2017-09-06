@@ -101,13 +101,19 @@ func (g *gSpeechTranscriber) wait(ctx context.Context, opName string) (*speechpb
 }
 
 func (g *gSpeechTranscriber) sendGCS(ctx context.Context, lang, gcsURI string, hints []string) (string, error) {
+	// Take a language and default to French if ends up undefined.
+	var l = language.Make(lang)
+	if l == language.Und {
+		log.Println("Language", lang, "was undefined, defaulting to French")
+		l = language.French
+	}
 	// Not requesting per work offset via "enableWordTimeOffsets": true in the config
 	// as I am not sure how useful it would be...
 	req := &speechpb.LongRunningRecognizeRequest{
 		Config: &speechpb.RecognitionConfig{
 			Encoding:        speechpb.RecognitionConfig_FLAC,
 			SampleRateHertz: 16000,
-			LanguageCode:    language.Make(lang).String(), // Must be a BCP-47 identifier.
+			LanguageCode:    l.String(), // Must be a BCP-47 identifier.
 			SpeechContexts: []*speechpb.SpeechContext{
 				{Phrases: hints},
 			},
