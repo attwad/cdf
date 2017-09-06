@@ -24,7 +24,7 @@ var (
 
 func main() {
 	flag.Parse()
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+	//log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 	ctx := context.Background()
 
 	p, err := pick.NewDatastorePicker(ctx, *projectID)
