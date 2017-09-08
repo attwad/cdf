@@ -5,6 +5,7 @@ import (
 	"context"
 	"flag"
 	"log"
+	"time"
 
 	"github.com/attwad/cdf/db"
 	"github.com/attwad/cdf/stats/io"
@@ -23,7 +24,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	stats := io.Stats{}
+	stats := io.Stats{
+		Computed: time.Now(),
+	}
 	cursor := ""
 	for {
 		log.Println("Fetching new lessons...")
