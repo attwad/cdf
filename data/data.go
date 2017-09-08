@@ -52,13 +52,6 @@ type Entry struct {
 	Transcript string `datastore:",noindex" json:"-"`
 }
 
-// ExternalCourse is what gets sent to clients, it contains formatted durations, dates etc.
-type ExternalCourse struct {
-	Course
-	FormattedDate     string `json:"date"`
-	FormattedDuration string `json:"duration"`
-}
-
 // Hints returns a list of sentences or words to help speech recognition.
 func (c *Course) Hints() []string {
 	// Context phrases must not be longer than 100 characters.
