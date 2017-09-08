@@ -74,6 +74,9 @@ spec:
           gcePersistentDisk:
             pdName: es-disk
             fsType: ext4
+        - name: es-license-key
+          secret:
+            secretName: es-license
       containers:
       - name: elasticsearch
         image: docker.elastic.co/elasticsearch/elasticsearch:5.5.2
@@ -91,5 +94,7 @@ spec:
           name: http
           protocol: TCP
         volumeMounts:
-        - mountPath: /var/data/elasticsearch
-          name: es-persistent-storage
+        - name: es-persistent-storage
+          mountPath: /var/data/elasticsearch
+        - name: es-license-key
+          mountPath: /var/secrets/license
