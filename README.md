@@ -3,6 +3,7 @@ Worker and elasticsearch for automated College de France audio transcripts
 
 [![Build Status](https://travis-ci.org/attwad/cdf.svg?branch=master)](https://travis-ci.org/attwad/cdf)
 [![GoDoc](https://godoc.org/github.com/attwad/cdf?status.png)](https://godoc.org/github.com/attwad/cdf)
+[![Go Report Card](https://goreportcard.com/badge/github.com/attwad/cdf)](https://goreportcard.com/report/github.com/attwad/cdf)
 
 ## Worker
 
