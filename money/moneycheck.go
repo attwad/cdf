@@ -10,29 +10,23 @@ import (
 )
 
 // $0.006 / 15 seconds
-const usdCentsPerSec = 0.006 / 15 * 100
+// Cf. https://cloud.google.com/speech/pricing.
+const usdCentsPerMin = 0.006 / 15 * 60 * 100
 
-// 1 EUR = 1.19 USD
-const eurCentsPerUSDCents = 119
-
-// Euros cents it takes to convert 1 second of speech.
-// As of Sept. 4th 2017 it takes ~1.24 EURs to convert 1H of speech.
-const eurCentsPerSec = usdCentsPerSec * 100 / eurCentsPerUSDCents
-
-var accountKey = datastore.NameKey("Account", "acc", nil)
+var accountKey = datastore.NameKey("Account", "acc_usd", nil)
 
 type account struct {
-	BalanceInEurCents int
+	BalanceInUsdCents int
 }
 
-// EurCentsToDuration returns the duration convertible with the given amount of euro cents.
-func EurCentsToDuration(amount int) time.Duration {
-	return time.Duration(float64(amount)/eurCentsPerSec) * time.Second
+// UsdCentsToDuration returns the duration convertible with the given amount of usd cents.
+func UsdCentsToDuration(amount int) time.Duration {
+	return time.Duration(float64(amount)/usdCentsPerMin) * time.Minute
 }
 
-// DurationToEurCents converts the given duration to the cost it represents.
-func DurationToEurCents(duration time.Duration) int {
-	return int(duration.Seconds() * eurCentsPerSec)
+// DurationToUsdCents converts the given duration to the cost it represents.
+func DurationToUsdCents(duration time.Duration) int {
+	return int(duration.Minutes() * usdCentsPerMin)
 }
 
 // Broker handles the account balance.
@@ -70,7 +64,7 @@ func (b *datastoreBroker) ChangeBalance(ctx context.Context, deltaCents int) err
 	if err := tx.Get(b.key, &act); err != nil {
 		return fmt.Errorf("tx.Get: %v", err)
 	}
-	act.BalanceInEurCents += deltaCents
+	act.BalanceInUsdCents += deltaCents
 	if _, err := tx.Put(b.key, &act); err != nil {
 		return fmt.Errorf("tx.Put: %v", err)
 	}
@@ -85,7 +79,7 @@ func (b *datastoreBroker) GetBalance(ctx context.Context) (int, error) {
 	if err := b.client.Get(ctx, b.key, &act); err != nil {
 		return 0, fmt.Errorf("client.Get: %v", err)
 	}
-	return act.BalanceInEurCents, nil
+	return act.BalanceInUsdCents, nil
 }
 
 func (b *datastoreBroker) init(ctx context.Context) error {
