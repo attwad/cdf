@@ -95,7 +95,7 @@ func (b *datastoreBroker) init(ctx context.Context) error {
 			log.Println("Created key", key)
 			b.key = key
 		} else {
-			return fmt.Errorf("getting initial account with key: %v", accountKey)
+			return fmt.Errorf("getting initial account with key %v: %s", accountKey, err)
 		}
 	}
 	b.key = accountKey
