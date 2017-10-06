@@ -27,7 +27,7 @@ spec:
         image: eu.gcr.io/college-de-france/worker:prod-v1.2.0
         resources:
           requests:
-            cpu: "50m"
+            cpu: "10m"
         volumeMounts:
         - name: google-cloud-key
           mountPath: /var/secrets/google
@@ -79,16 +79,20 @@ spec:
             secretName: es-license
       containers:
       - name: elasticsearch
-        image: docker.elastic.co/elasticsearch/elasticsearch:5.5.2
+        image: docker.elastic.co/elasticsearch/elasticsearch:5.6.2
         command: ["bin/elasticsearch"]
         args: ["-Epath.data=/var/data/elasticsearch", "-Expack.security.enabled=false", "-Ecluster.name=esdb", "-Enode.name=master-data-node", "-Enetwork.host=0.0.0.0", "-Ebootstrap.memory_lock=true", "-Ediscovery.zen.minimum_master_nodes=1", "-Ediscovery.type=single-node"]
         securityContext:
           capabilities:
             add:
               - IPC_LOCK
+        env:
+        - name: ES_JAVA_OPTS
+          value: "-Xms1500m -Xmx1500m"
         resources:
           requests:
-            memory: "2Gi"
+            memory: "1500Mi"
+            cpu: "10m"
         ports:
         - containerPort: 9200
           name: http
