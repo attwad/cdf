@@ -2,6 +2,7 @@ package indexer
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -94,7 +95,7 @@ func (i *elasticIndexer) Index(c data.Course, sentences []string) error {
 	log.Printf("Indexing response: %+v", ir)
 	if ir.HasError {
 		log.Println("Indexing response had an error:", string(respBody))
-		return fmt.Errorf("indexing response had an error")
+		return errors.New("indexing response had an error")
 	}
 	if len(ir.Items) == 0 {
 		return fmt.Errorf("nothing was indexed")

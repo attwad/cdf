@@ -1,9 +1,11 @@
 package worker
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -98,6 +100,11 @@ func (f *fakeIndexer) Index(course data.Course, text []string) error {
 	return nil
 }
 
+var (
+	buf     bytes.Buffer
+	infoLog = log.New(&buf, "INFO: ", log.Lshortfile)
+)
+
 func TestMaybeSchedule(t *testing.T) {
 	var tests = []struct {
 		msg           string
@@ -108,24 +115,27 @@ func TestMaybeSchedule(t *testing.T) {
 		{
 			msg: "balance ok",
 			w: Worker{
-				broker: &fakeBroker{balance: 500},
-				picker: &fakePicker{scheduledLength: 10},
+				broker:  &fakeBroker{balance: 500},
+				picker:  &fakePicker{scheduledLength: 10},
+				infoLog: infoLog,
 			},
 			taskScheduled: true,
 			wantError:     false,
 		}, {
 			msg: "not enough balance",
 			w: Worker{
-				broker: &fakeBroker{balance: 10},
-				picker: &fakePicker{},
+				broker:  &fakeBroker{balance: 10},
+				picker:  &fakePicker{},
+				infoLog: infoLog,
 			},
 			taskScheduled: false,
 			wantError:     false,
 		}, {
 			msg: "nothing to schedule",
 			w: Worker{
-				broker: &fakeBroker{balance: 10},
-				picker: &fakePicker{},
+				broker:  &fakeBroker{balance: 10},
+				picker:  &fakePicker{},
+				infoLog: infoLog,
 			},
 			taskScheduled: false,
 			wantError:     false,
@@ -136,7 +146,8 @@ func TestMaybeSchedule(t *testing.T) {
 					balance:         500,
 					getBalanceError: fmt.Errorf("not connected"),
 				},
-				picker: &fakePicker{},
+				picker:  &fakePicker{},
+				infoLog: infoLog,
 			},
 			taskScheduled: false,
 			wantError:     true,
@@ -162,6 +173,7 @@ func TestDownloadToTmpFile(t *testing.T) {
 		httpClient: &http.Client{
 			Timeout: time.Second * 5,
 		},
+		infoLog: infoLog,
 	}
 	_, cleanup, err := w.downloadToTmpFile(ts.URL)
 	if err != nil {
@@ -190,7 +202,8 @@ func TestRun(t *testing.T) {
 		httpClient: &http.Client{
 			Timeout: time.Second * 5,
 		},
-		health: &fakeHealthChecker{healthy: true},
+		health:  &fakeHealthChecker{healthy: true},
+		infoLog: infoLog,
 	}
 	ctx := context.Background()
 	if err := w.Run(ctx); err != nil {

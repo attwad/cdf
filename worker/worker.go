@@ -30,10 +30,11 @@ type Worker struct {
 	soxPath     string
 	httpClient  *http.Client
 	health      health.Checker
+	infoLog     *log.Logger
 }
 
 // NewGCPWorker creates a new worker that does its work using Google Cloud Platform.
-func NewGCPWorker(u upload.FileUploader, t transcribe.Transcriber, m money.Broker, p pick.Picker, i indexer.Indexer, soxPath string, h health.Checker) *Worker {
+func NewGCPWorker(u upload.FileUploader, t transcribe.Transcriber, m money.Broker, p pick.Picker, i indexer.Indexer, soxPath string, h health.Checker, infoLog *log.Logger) *Worker {
 	return &Worker{
 		u, t, m, p, i, soxPath,
 		// Any download of file shouldn't take more than a few minutes really...
@@ -41,13 +42,14 @@ func NewGCPWorker(u upload.FileUploader, t transcribe.Transcriber, m money.Broke
 			Timeout: time.Minute * 30,
 		},
 		h,
+		infoLog,
 	}
 }
 
 // Run checks for scheduled tasks and handle all of them if any.
 func (w *Worker) Run(ctx context.Context) error {
 	if !w.health.IsHealthy() {
-		log.Println("ElasticSearch is not healthy, not running...")
+		w.infoLog.Println("ElasticSearch is not healthy, not running...")
 		return nil
 	}
 	// Handle the scheduled tasks.
@@ -57,19 +59,19 @@ func (w *Worker) Run(ctx context.Context) error {
 	}
 	for key, course := range courses {
 		// Download file from the web.
-		log.Println("Downloading", course.AudioLink, "to tmp file")
+		w.infoLog.Println("Downloading", course.AudioLink, "to tmp file")
 		f, tmpCleanup, err := w.downloadToTmpFile(course.AudioLink)
 		if err != nil {
 			return err
 		}
 		defer tmpCleanup()
 		// Convert to FLAC.
-		log.Println("Converting to flac")
+		w.infoLog.Println("Converting to flac")
 		paths, err := w.transcriber.ConvertToFLAC(ctx, w.soxPath, f.Name())
 		if err != nil {
 			return err
 		}
-		log.Println("FLAC files:", paths)
+		w.infoLog.Println("FLAC files:", paths)
 		fullText := ""
 		for _, flac := range paths {
 			flacReader, err := os.Open(flac)
@@ -78,12 +80,12 @@ func (w *Worker) Run(ctx context.Context) error {
 			}
 			defer flacReader.Close()
 			// Save FLAC to cloud storage.
-			log.Println("Saving flac to could storage")
+			w.infoLog.Println("Saving flac to could storage")
 			if err := w.uploader.UploadFile(ctx, flacReader, filepath.Base(flac)); err != nil {
 				return err
 			}
 			// Send it to speech recognition.
-			log.Println("Transcribing audio")
+			w.infoLog.Println("Transcribing audio")
 			t, err := w.transcriber.Transcribe(ctx, course.Language, w.uploader.Path(filepath.Base(flac)), course.Hints())
 			if err != nil {
 				return err
@@ -96,24 +98,24 @@ func (w *Worker) Run(ctx context.Context) error {
 			flacText := strings.Join(text, " ")
 			fullText += flacText + " "
 			textName := filepath.Base(course.AudioLink) + ".txt"
-			log.Println("Saving text to: ", textName)
+			w.infoLog.Println("Saving text to: ", textName)
 			if err := w.uploader.UploadFile(ctx, strings.NewReader(flacText), filepath.Base(textName)); err != nil {
 				return err
 			}
 			// Remove FLAC file from cloud storage.
 			// TODO: defer and panic on error?
-			log.Println("Deleting flac from cloud storage")
+			w.infoLog.Println("Deleting flac from cloud storage")
 			if err := w.uploader.Delete(ctx, filepath.Base(flac)); err != nil {
 				return err
 			}
 			// Index sentences.
-			log.Println("Indexing text")
+			w.infoLog.Println("Indexing text")
 			if err := w.indexer.Index(course, text); err != nil {
 				return err
 			}
 		}
 		// Mark the file as converted.
-		log.Println("Marking", course.AudioLink, "as converted")
+		w.infoLog.Println("Marking", course.AudioLink, "as converted")
 		if err := w.picker.MarkConverted(ctx, key, strings.TrimSpace(fullText)); err != nil {
 			return err
 		}
@@ -152,25 +154,25 @@ func (w *Worker) MaybeSchedule(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	log.Println("Balance=", balance)
+	w.infoLog.Println("Balance=", balance)
 	if balance <= 0 {
 		return false, nil
 	}
 	equivDuration := money.UsdCentsToDuration(balance)
-	log.Println("Current balance can schedule up to", equivDuration)
+	w.infoLog.Println("Current balance can schedule up to", equivDuration)
 	length, err := w.picker.ScheduleRandom(ctx, equivDuration)
 	if err != nil {
 		return false, fmt.Errorf("sheduling random lesson: %v", err)
 	}
 	if length <= 0 {
-		log.Println("Nothing to schedule, bailing")
+		w.infoLog.Println("Nothing to schedule, bailing")
 		return false, nil
 	}
-	log.Println("New task scheduled:", length)
+	w.infoLog.Println("New task scheduled:", length)
 	equivBalance := money.DurationToUsdCents(length)
 	if err := w.broker.ChangeBalance(ctx, -equivBalance); err != nil {
 		return false, err
 	}
-	log.Println("Decreased balance")
+	w.infoLog.Println("Decreased balance")
 	return true, nil
 }
