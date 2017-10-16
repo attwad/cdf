@@ -34,7 +34,6 @@ func main() {
 		log.Fatalf("Failed to create client: %v", err)
 	}
 	defer cleanup()
-	alertLog.Panicf("woops")
 
 	p, err := pick.NewDatastorePicker(ctx, *projectID)
 	if err != nil {
