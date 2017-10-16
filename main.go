@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"time"
 
+	"github.com/attwad/cdf/errorreport"
 	"github.com/attwad/cdf/health"
 	"github.com/attwad/cdf/indexer"
 	"github.com/attwad/cdf/money"
@@ -24,8 +26,13 @@ var (
 
 func main() {
 	flag.Parse()
-	//log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 	ctx := context.Background()
+
+	er, err := errorreport.NewStackdriverReporter(ctx, *projectID, "worker")
+	if err != nil {
+		log.Fatalf("Creating error reporting client: %v", err)
+	}
+	defer er.Close()
 
 	p, err := pick.NewDatastorePicker(ctx, *projectID)
 	if err != nil {
@@ -55,11 +62,13 @@ func main() {
 	log.Println("Analyzer created, entering loop...")
 	for {
 		if err := a.Run(ctx); err != nil {
-			log.Fatalf("running: %v", err)
+			log.Println("[ERROR]: running:", err)
+			er.Report(fmt.Errorf("Running: %v", err))
 		}
 		hasNew, err := a.MaybeSchedule(ctx)
 		if err != nil {
 			log.Fatalf("Scheduling new tasks: %v", err)
+			er.Report(fmt.Errorf("Scheduling new task: %v", err))
 		}
 		// Only sleep if we have nothing scheduled.
 		if !hasNew {

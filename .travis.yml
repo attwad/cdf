@@ -2,3 +2,4 @@ language: go
 
 install:
   - go get cloud.google.com/go/storage
+  - go get cloud.google.com/go/errorreporting
