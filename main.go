@@ -6,8 +6,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/attwad/cdf/logging"
-
 	"github.com/attwad/cdf/health"
 	"github.com/attwad/cdf/indexer"
 	"github.com/attwad/cdf/money"
@@ -22,37 +20,30 @@ var (
 	bucket         = flag.String("bucket", "", "Cloud storage bucket")
 	soxPath        = flag.String("sox_path", "sox", "SOX binary path")
 	elasticAddress = flag.String("elastic_address", "http://elastic:9200", "HTTP address to elastic instance")
-	logType        = flag.String("log_type", "local", "Type of logger to use: 'local' or 'strackdriver'")
 )
 
 func main() {
 	flag.Parse()
+	//log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 	ctx := context.Background()
-
-	infoLog, alertLog, cleanup, err := logging.NewLogger(ctx, *projectID, *logType)
-	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
-	}
-	defer cleanup()
-	alertLog.Panicf("woops")
 
 	p, err := pick.NewDatastorePicker(ctx, *projectID)
 	if err != nil {
-		alertLog.Panic(err)
+		log.Fatal(err)
 	}
 	u, err := upload.NewGCSFileUploader(ctx, *bucket)
 	if err != nil {
-		alertLog.Panic(err)
+		log.Fatal(err)
 	}
 	t, err := transcribe.NewGSpeechTranscriber(ctx)
 	if err != nil {
-		alertLog.Panic(err)
+		log.Fatal(err)
 	}
 	b, err := money.NewDatastoreBroker(ctx, *projectID)
 	if err != nil {
-		alertLog.Panic(err)
+		log.Fatal(err)
 	}
-	infoLog.Println("Will connect to elastic instance @", *elasticAddress)
+	log.Println("Will connect to elastic instance @", *elasticAddress)
 	a := worker.NewGCPWorker(
 		u,
 		t,
@@ -60,20 +51,19 @@ func main() {
 		p,
 		indexer.NewElasticIndexer(*elasticAddress),
 		*soxPath,
-		health.NewElasticHealthChecker(*elasticAddress),
-		infoLog)
-	infoLog.Println("Analyzer created, entering loop...")
+		health.NewElasticHealthChecker(*elasticAddress))
+	log.Println("Analyzer created, entering loop...")
 	for {
 		if err := a.Run(ctx); err != nil {
-			alertLog.Panicf("running: %v", err)
+			log.Fatalf("running: %v", err)
 		}
 		hasNew, err := a.MaybeSchedule(ctx)
 		if err != nil {
-			alertLog.Panicf("Scheduling new tasks: %v", err)
+			log.Fatalf("Scheduling new tasks: %v", err)
 		}
 		// Only sleep if we have nothing scheduled.
 		if !hasNew {
-			infoLog.Println("Sleeping...")
+			log.Println("Sleeping...")
 			time.Sleep(1 * time.Minute)
 		}
 	}
